@@ -7,6 +7,14 @@ const Rank = enum(u4) {
     Queen = 12,
     King = 13,
     Ace = 14,
+
+    pub fn eq(self: Rank, other: Rank) bool {
+        return self == other;
+    }
+
+    pub fn gt(self: Rank, other: Rank) bool {
+        self > other;
+    }
 };
 
 /// Constant for-loop-able array of suits. For consistency, 
