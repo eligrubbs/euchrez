@@ -1,7 +1,5 @@
 // Implementation of Suits of common playing cards
 
-
-
 const Suit = enum(u2) {
     Spades,
     Clubs,
