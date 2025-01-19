@@ -1,6 +1,8 @@
 // Implementation of Suits of common playing cards
 
-const Suit = enum(u2) {
+pub const SuitError = error{InvalidChar};
+
+pub const Suit = enum(u2) {
     Spades,
     Clubs,
     Diamonds,
@@ -9,17 +11,36 @@ const Suit = enum(u2) {
     pub fn eq(self: Suit, other: Suit) bool {
         return self == other;
     }
+
+    pub fn char(self: Suit) u8 {
+        return switch (self) {
+            .Spades => 'S',
+            .Clubs => 'C',
+            .Diamonds => 'D',
+            .Hearts => 'H',
+        };
+    }
+
+    pub fn from_char(chr: u8) SuitError!Suit {
+        return switch (chr) {
+            'S' => .Spades,
+            'C' => .Clubs,
+            'D' => .Diamonds,
+            'H' => .Hearts,
+            else => SuitError.InvalidChar,
+        };
+    }
 };
 
 /// Constant for-loop-able array of suits. For consistency, 
 /// this range is referenced everywhere something like this could be.
-const SuitRange: [4]Suit = [4]Suit{Suit.Spades, Suit.Clubs, Suit.Diamonds, Suit.Hearts};
+pub const SuitRange: [4]Suit = [4]Suit{Suit.Spades, Suit.Clubs, Suit.Diamonds, Suit.Hearts};
 
 /// Iterator for suits.  
 /// Order is Spades, Clubs, Diamonds, Hearts  
 /// 
 /// Recommended use is to call `new()`, although an explicit map can be made.
-const SuitIterator = struct {
+pub const SuitIterator = struct {
     suits: *const [4]Suit,
     index: usize,
 
