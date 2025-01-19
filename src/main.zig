@@ -2,7 +2,17 @@
 //! you are building an executable. If you are making a library, the convention
 //! is to delete this file and start with root.zig instead.
 
+const std = @import("std");
+
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
+    var vars = try std.process.getEnvMap(allocator);
+    defer vars.deinit();
+
+    // std.debug.print("Vars: {s}\n", .{vars.get("PATH").?});
+
     // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
     std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
 
@@ -38,8 +48,6 @@ test "fuzz example" {
     };
     try std.testing.fuzz(global.testOne, .{});
 }
-
-const std = @import("std");
 
 /// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
 const lib = @import("euchre-zig_lib");
