@@ -43,30 +43,32 @@ pub const Rank = enum(u4) {
 
     /// Constant for-loop-able array of suits. For consistency, 
     /// this range is referenced everywhere something like this could be.
-    pub fn RankRange() [6]Rank {
+    pub fn Range() [6]Rank {
         return [6]Rank{Rank.Nine, Rank.Ten, Rank.Jack, Rank.Queen, Rank.King, Rank.Ace};
     }
-};
 
-/// Iterator for Ranks
-/// 
-/// 
-pub const RankIterator = struct {
-    ranks: [6]Rank,
-    index: usize,
+    pub fn Iterator() type {
+        return struct {
+            const IterDef = @This();
 
-    pub fn new() RankIterator {
-        return RankIterator{
-            .ranks = Rank.RankRange(),
-            .index = 0,
+            ranks: [6]Rank,
+            index: usize,
+
+            pub fn new() IterDef {
+                return IterDef {
+                    .ranks = Rank.RankRange(),
+                    .index = 0,
+                };
+            }
+
+            pub fn next(self: *IterDef) ?Rank {
+                if (self.index >= self.ranks.len) return null;
+                self.index += 1;
+                return self.ranks[self.index-1];
+            }
         };
     }
 
-    pub fn next(self: *RankIterator) ?Rank {
-        if (self.index >= self.ranks.len) return null;
-        self.index += 1;
-        return self.ranks[self.index-1];
-    }
 };
 
 

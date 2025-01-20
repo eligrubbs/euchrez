@@ -42,8 +42,8 @@ pub const Deck = struct {
         expect(deck_buff.*.len == deck_size) catch return DeckError.DeckSizeNot24;
 
         var card_ind: usize = 0;
-        inline for (Suit.SuitRange()) |suit| {
-            inline for (Rank.RankRange()) |rank| {
+        inline for (Suit.Range()) |suit| {
+            inline for (Rank.Range()) |rank| {
                 deck_buff.*[card_ind] = Card{.suit = suit, .rank = rank};
                 card_ind += 1;
             }

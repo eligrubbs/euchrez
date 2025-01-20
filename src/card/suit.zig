@@ -34,40 +34,46 @@ pub const Suit = enum(u2) {
     
     /// Constant for-loop-able array of suits. For consistency, 
     /// this range is referenced everywhere something like this could be.
-    pub fn SuitRange() [4]Suit {
+    pub fn Range() [4]Suit {
         return [4]Suit{Suit.Spades, Suit.Clubs, Suit.Diamonds, Suit.Hearts};
     }
-};
 
-/// Iterator for suits.  
-/// Order is Spades, Clubs, Diamonds, Hearts  
-/// 
-/// Recommended use is to call `new()`, although an explicit map can be made.
-pub const SuitIterator = struct {
-    suits: [4]Suit,
-    index: usize,
+    /// Iterator for suits.  
+    /// In same order as `Suit.Range()` 
+    /// 
+    /// Recommended use is to call `new()`, although an explicit map can be made.
+    pub fn Iterator() type {
+        return struct {
+            const IterDef = @This();
 
-    /// Creates a new `SuitIterator`. Must be `var` to actually be useful.
-    /// 
-    /// Example:  
-    /// ```zig
-    /// var suit_iter = SuitIterator.new();
-    /// 
-    /// const is_true = suit_iter.next() == Suit.Spades;
-    /// ```
-    pub fn new() SuitIterator {
-        return SuitIterator{
-            .suits = Suit.SuitRange(),
-            .index = 0,
+            suits: [4]Suit,
+            index: usize,
+
+            /// Creates a new `SuitIterator`. Must be `var` to actually be useful.
+            /// 
+            /// Example:  
+            /// ```zig
+            /// var suit_iter = SuitIterator.new();
+            /// 
+            /// const is_true = suit_iter.next() == Suit.Spades;
+            /// ```
+            pub fn new() IterDef {
+                return IterDef {
+                    .suits = Suit.Range(),
+                    .index = 0,
+                };
+            }
+
+            pub fn next(self: *IterDef) ?Suit {
+                if (self.index >= self.suits.len) return null;
+                self.index += 1;
+                return self.suits[self.index-1];
+            }
         };
     }
-
-    pub fn next(self: *SuitIterator) ?Suit {
-        if (self.index >= self.suits.len) return null;
-        self.index += 1;
-        return self.suits[self.index-1];
-    }
 };
+
+
 
 //
 //
@@ -96,11 +102,11 @@ test "suits_equal" {
 test "suits_iter" {
     const suit_order: [4]Suit = [4]Suit{Suit.Spades, Suit.Clubs, Suit.Diamonds, Suit.Hearts};
 
-    for (Suit.SuitRange(), 0..) |suit, ind| {
+    for (Suit.Range(), 0..) |suit, ind| {
         try expect(suit_order[ind] == suit);
     }
 
-    var suit_iter = SuitIterator.new();
+    var suit_iter = Suit.Iterator().new();
     var curr_suit = suit_iter.next();
     var ind: usize = 0;
     while (curr_suit != null) : ({curr_suit = suit_iter.next(); ind += 1;}) {
