@@ -30,18 +30,21 @@ pub const Suit = enum(u2) {
             else => SuitError.InvalidChar,
         };
     }
-};
 
-/// Constant for-loop-able array of suits. For consistency, 
-/// this range is referenced everywhere something like this could be.
-pub const SuitRange: [4]Suit = [4]Suit{Suit.Spades, Suit.Clubs, Suit.Diamonds, Suit.Hearts};
+    
+    /// Constant for-loop-able array of suits. For consistency, 
+    /// this range is referenced everywhere something like this could be.
+    pub fn SuitRange() [4]Suit {
+        return [4]Suit{Suit.Spades, Suit.Clubs, Suit.Diamonds, Suit.Hearts};
+    }
+};
 
 /// Iterator for suits.  
 /// Order is Spades, Clubs, Diamonds, Hearts  
 /// 
 /// Recommended use is to call `new()`, although an explicit map can be made.
 pub const SuitIterator = struct {
-    suits: *const [4]Suit,
+    suits: [4]Suit,
     index: usize,
 
     /// Creates a new `SuitIterator`. Must be `var` to actually be useful.
@@ -54,7 +57,7 @@ pub const SuitIterator = struct {
     /// ```
     pub fn new() SuitIterator {
         return SuitIterator{
-            .suits = &SuitRange,
+            .suits = Suit.SuitRange(),
             .index = 0,
         };
     }
@@ -93,7 +96,7 @@ test "suits_equal" {
 test "suits_iter" {
     const suit_order: [4]Suit = [4]Suit{Suit.Spades, Suit.Clubs, Suit.Diamonds, Suit.Hearts};
 
-    for (SuitRange, 0..) |suit, ind| {
+    for (Suit.SuitRange(), 0..) |suit, ind| {
         try expect(suit_order[ind] == suit);
     }
 

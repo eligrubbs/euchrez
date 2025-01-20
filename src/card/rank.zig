@@ -40,22 +40,24 @@ pub const Rank = enum(u4) {
             else => RankError.InvalidChar,
         };
     }
-};
 
-/// Constant for-loop-able array of suits. For consistency, 
-/// this range is referenced everywhere something like this could be.
-pub const RankRange: [6]Rank = [6]Rank{Rank.Nine, Rank.Ten, Rank.Jack, Rank.Queen, Rank.King, Rank.Ace};
+    /// Constant for-loop-able array of suits. For consistency, 
+    /// this range is referenced everywhere something like this could be.
+    pub fn RankRange() [6]Rank {
+        return [6]Rank{Rank.Nine, Rank.Ten, Rank.Jack, Rank.Queen, Rank.King, Rank.Ace};
+    }
+};
 
 /// Iterator for Ranks
 /// 
 /// 
 pub const RankIterator = struct {
-    ranks: *const[6]Rank,
+    ranks: [6]Rank,
     index: usize,
 
     pub fn new() RankIterator {
         return RankIterator{
-            .ranks = &RankRange,
+            .ranks = Rank.RankRange(),
             .index = 0,
         };
     }

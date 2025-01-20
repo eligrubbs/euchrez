@@ -4,9 +4,7 @@ const std = @import("std");
 const Card = @import("card/card.zig").Card;
 
 const Suit = @import("card/suit.zig").Suit;
-const SuitRange = @import("card/suit.zig").SuitRange;
 const Rank = @import("card/rank.zig").Rank;
-const RankRange = @import("card/rank.zig").RankRange;
 
 
 pub const Deck = struct {
@@ -44,8 +42,8 @@ pub const Deck = struct {
         expect(deck_buff.*.len == deck_size) catch return DeckError.DeckSizeNot24;
 
         var card_ind: usize = 0;
-        inline for (SuitRange) |suit| {
-            inline for (RankRange) |rank| {
+        inline for (Suit.SuitRange()) |suit| {
+            inline for (Rank.RankRange()) |rank| {
                 deck_buff.*[card_ind] = Card{.suit = suit, .rank = rank};
                 card_ind += 1;
             }
