@@ -1,6 +1,8 @@
 // The `Game` struct contains logic and exposes API's to run a game of euchre.  
 // While Euchre is a 4 player game, the API exposes a simple `step` function.
 
+const std = @import("std");
+
 const Deck = @import("deck.zig").Deck;
 
 const Game = struct {
@@ -12,8 +14,13 @@ const Game = struct {
 
     /// Creates a game object. It is NOT ready to be played.
     /// 
-    /// Caller responsible for freeing used memory using `deinit` method
-    pub fn init() void {
+    /// Caller is responsible for cleaning up game's memory with `deinit`
+    pub fn init(allocator: std.mem.Allocator) Game {
+
+        return Game {
+            .in_non_terminal_state = false,
+            .deck = Deck.init(allocator),
+        };
 
     }
 
@@ -23,8 +30,8 @@ const Game = struct {
     }
 
     /// Cleans up game object.
-    pub fn deinit() void {
-
+    pub fn deinit(self: *Game) void {
+        self.deck.deinit();
     }
 
     pub fn is_active(self: *Game) bool {

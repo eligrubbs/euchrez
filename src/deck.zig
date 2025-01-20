@@ -29,6 +29,7 @@ pub const Deck = struct {
             .allocator = allocator,
             .deal_index = 0,
         };
+        errdefer allocator.free(deck.card_buffer);
 
         try Deck.fill_unshuffled(&deck.card_buffer);
 
