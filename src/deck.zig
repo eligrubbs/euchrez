@@ -18,6 +18,7 @@ pub const Deck = struct {
     const DeckError = error{
         OutOfMemory,
         DeckSizeNot24,
+        NotEnoughCards,
     };
 
     /// Create an unshuffled deck object.
@@ -49,6 +50,37 @@ pub const Deck = struct {
             }
         }
     }
+
+    /// Return a reference to the next 5 cards in the deck.
+    /// Then, increments `deal_index` by 5 so these cards can't be dealt again.
+    /// 
+    /// The cards are NOT removed from the deck's memory buffer.
+    /// 
+    /// Will throw an error there are not 5 cards to deal.
+    pub fn deal_five_cards(self: *Deck) DeckError.NotEnoughCards![]const Card {
+        if(self.deal_index >= (deck_size - 4)) return DeckError.NotEnoughCards;
+
+        self.deal_index += 5;
+        return self.card_buffer[(self.deal_index-5)..self.deal_index];
+    }
+
+    /// Return a reference to the next undealt card.
+    /// Does not deal the card.
+    pub fn peek_at_top_card(self: *Deck) DeckError.NotEnoughCards! *const Card {
+        if (self.deal_index >= deck_size) return DeckError.NotEnoughCards;
+        return &self.card_buffer[self.deal_index];
+    }
+
+    /// Return a reference to the next undealt card.
+    /// Increments `deal_index` by 1 so this card can't be dealt again.
+    /// 
+    /// The card is NOT removed from the deck's memory buffer.
+    /// 
+    pub fn deal_one_card(self: *Deck) DeckError.NotEnoughCards!*const Card {
+        if (self.deal_index >= deck_size) return DeckError.NotEnoughCards;
+        self.deal_index += 1;
+        return &self.card_buffer[self.deal_index-1];
+    }
 };
 
 
@@ -59,5 +91,5 @@ test "create_unshuffled" {
     defer deck.deinit();
     try expect(deck.card_buffer[0].eq(&Card{.suit=Suit.Spades, .rank=Rank.Nine}));
     try expect(deck.card_buffer[23].eq(&Card{.suit=Suit.Hearts, .rank=Rank.Ace}));
-    try expect(deck.card_buffer.len == 24);
+    try expect(deck.card_buffer.len == 24); 
 }
