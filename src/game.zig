@@ -6,6 +6,8 @@ const Deck = @import("deck.zig").Deck;
 const Game = struct {
     const num_players = 4; // do not change
 
+    in_non_terminal_state: bool = false,
+
     deck: Deck,
 
     /// Creates a game object. It is NOT ready to be played.
@@ -24,4 +26,9 @@ const Game = struct {
     pub fn deinit() void {
 
     }
+
+    pub fn is_active(self: *Game) bool {
+        return self.in_non_terminal_state;
+    }
+
 };

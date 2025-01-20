@@ -91,7 +91,7 @@ test "create_unshuffled" {
     var deck = try Deck.init(std.testing.allocator);
     defer deck.deinit();
     try expect(deck.card_buffer[0].eq(&Card{.suit=Suit.Spades, .rank=Rank.Nine}));
-    try expect(deck.card_buffer[23].eq(&Card{.suit=Suit.Hearts, .rank=Rank.Ace}));
+    try expect(deck.card_buffer[23].eq(&Card{.suit=Suit.Clubs, .rank=Rank.Ace}));
     try expect(deck.card_buffer.len == 24); 
 }
 
@@ -112,17 +112,17 @@ test "deal euchre deck" {
 
     const hand2 = try deck.deal_five_cards();
     const expected_hand2 = [5]Card {try Card.from_str("SA"),
-                                             try Card.from_str("C9"),
-                                             try Card.from_str("CT"),
-                                             try Card.from_str("CJ"),
-                                             try Card.from_str("CQ")};
+                                             try Card.from_str("H9"),
+                                             try Card.from_str("HT"),
+                                             try Card.from_str("HJ"),
+                                             try Card.from_str("HQ")};
     for (expected_hand2, 0..) |card, ind| {
         try expect(card.eq(&hand2[ind]));
     }
 
     const hand3 = try deck.deal_five_cards();
-    const expected_hand3 = [5]Card {try Card.from_str("CK"),
-                                             try Card.from_str("CA"),
+    const expected_hand3 = [5]Card {try Card.from_str("HK"),
+                                             try Card.from_str("HA"),
                                              try Card.from_str("D9"),
                                              try Card.from_str("DT"),
                                              try Card.from_str("DJ")};
@@ -134,8 +134,8 @@ test "deal euchre deck" {
     const expected_hand4 = [5]Card {try Card.from_str("DQ"),
                                              try Card.from_str("DK"),
                                              try Card.from_str("DA"),
-                                             try Card.from_str("H9"),
-                                             try Card.from_str("HT")};
+                                             try Card.from_str("C9"),
+                                             try Card.from_str("CT")};
     for (expected_hand4, 0..) |card, ind| {
         try expect(card.eq(&hand4[ind]));
     }

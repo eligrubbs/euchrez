@@ -34,8 +34,10 @@ pub const Suit = enum(u2) {
     
     /// Constant for-loop-able array of suits. For consistency, 
     /// this range is referenced everywhere something like this could be.
+    /// 
+    /// The order follows the reverse alphabetical convention of some types of Poker
     pub fn Range() [4]Suit {
-        return [4]Suit{Suit.Spades, Suit.Clubs, Suit.Diamonds, Suit.Hearts};
+        return [4]Suit{Suit.Spades, Suit.Hearts, Suit.Diamonds, Suit.Clubs,};
     }
 
     /// Iterator for suits.  
@@ -100,7 +102,7 @@ test "suits_equal" {
 }
 
 test "suits_iter" {
-    const suit_order: [4]Suit = [4]Suit{Suit.Spades, Suit.Clubs, Suit.Diamonds, Suit.Hearts};
+    const suit_order: [4]Suit = [4]Suit{Suit.Spades, Suit.Hearts, Suit.Diamonds, Suit.Clubs,};
 
     for (Suit.Range(), 0..) |suit, ind| {
         try expect(suit_order[ind] == suit);
