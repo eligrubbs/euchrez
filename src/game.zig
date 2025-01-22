@@ -4,6 +4,8 @@
 const std = @import("std");
 
 const Card = @import("card/card.zig").Card;
+const Suit = @import("card/suit.zig").Suit;
+const Rank = @import("card/rank.zig").Rank;
 const Deck = @import("deck.zig").Deck;
 const Player = @import("player.zig").Player;
 const FlippedChoice = @import("actions.zig").FlippedChoice;
@@ -13,19 +15,26 @@ const Game = struct {
 
     was_initialized: bool, // make sure that reset is called before calling other methods
     is_over: bool,
+    scores: ?[4]u3, // scores not null only at end of game
 
     deck: Deck,
 
     players: [4]Player,
     dealer_id: u2,
     curr_player_id: u2,
-    calling_player_id: ?u2,
+    caller_id: ?u2,
 
     flipped_card: *const Card,
     flipped_choice: ?FlippedChoice,
 
+    order: [4]u2,
+    center: ?[4:null]?*const Card,
+    trump: ?Suit,
+
     const GameError = error {
         NotPlayable,
+        CenterIsEmpty,
+        TrumpNotSet,
     };
 
     /// Creates a game object. It is NOT ready to be played.
@@ -36,16 +45,21 @@ const Game = struct {
         return Game {
             .was_initialized = false,
             .is_over = false,
+            .scores = null,
 
             .deck = try Deck.init(allocator),
 
             .players = undefined,
             .dealer_id = undefined,
             .curr_player_id = undefined,
-            .calling_player_id = null,
+            .caller_id = null,
 
             .flipped_card = undefined,
             .flipped_choice = null,
+
+            .order = undefined,
+            .center = null,
+            .trump = null,
         };
 
     }
@@ -63,6 +77,7 @@ const Game = struct {
         self.was_initialized = true;
 
         self.is_over = false;
+        self.scores = null;
 
         Deck.fill_unshuffled(&self.deck.card_buffer);
 
@@ -72,10 +87,15 @@ const Game = struct {
 
         self.dealer_id = 0;
         self.curr_player_id = 1;
-        self.calling_player_id = null;
+        self.caller_id = null;
 
         self.flipped_card = try self.deck.deal_one_card();
         self.flipped_choice = null;
+
+        self.order = self.order_starting_from(self.curr_player_id);
+        self.center = null;
+        self.trump = null;
+
     }
 
     /// Cleans up game object.
@@ -83,8 +103,40 @@ const Game = struct {
         self.deck.deinit();
     }
 
-    pub fn is_active(self: *Game) bool {
-        return self.in_non_terminal_state;
+    /// Returns the order of the rest of the players if `p_id` is assumed to go first.
+    fn order_starting_from(p_id: u2) [4]u2 {
+        return .{p_id, p_id +% 1, p_id +% 2, p_id +% 3};
     }
 
+    /// Returns the effective suit of the game?
+    /// If there is no effective suit, return null
+    fn get_led_suit(self: *const Game) GameError!?Suit {
+        if (self.center == null) return null;
+
+        if (self.trump == null) return GameError.TrumpNotSet;
+        if (self.center.?[0] == null) return GameError.CenterIsEmpty;
+
+        const led_card = self.center.?[0].?;
+        if (self.is_left_bower(led_card)) {
+                return self.trump;
+        }
+        return led_card.suit;
+    }
+
+    fn is_left_bower(self: *const Game, card: *const Card) GameError!bool {
+        if (self.trump == null) return GameError.TrumpNotSet;
+
+        return (card.rank.eq(Rank.from_char('J')) and 
+                self.left_bower_suit(self.trump.?) == card.suit);
+    }
+
+    /// Given a trump suit, returns the suit whose Jack is considered trump 
+    fn left_bower_suit(trump: Suit) Suit {
+        return switch (trump) {
+            .Spades => .Clubs,
+            .Clubs => .Spades,
+            .Hearts => .Diamonds,
+            .Diamonds => .Hearts,
+        };
+    }
 };
