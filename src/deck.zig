@@ -40,7 +40,7 @@ pub const Deck = struct {
         self.allocator.free(self.card_buffer);
     }
 
-    fn fill_unshuffled(deck_buff: *[]Card) DeckError!void {
+    pub fn fill_unshuffled(deck_buff: *[]Card) DeckError!void {
         expect(deck_buff.*.len == deck_size) catch return DeckError.DeckSizeNot24;
 
         var card_ind: usize = 0;

@@ -48,6 +48,12 @@ const Action = enum(u6) {
 };
 
 
+const FlippedChoice = enum(u1) {
+    PickedUp,
+    TurnedDown,
+};
+
+
 const expect = std.testing.expect;
 const expectErr = std.testing.expectError;
 
