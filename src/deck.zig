@@ -10,38 +10,29 @@ const Rank = @import("card/rank.zig").Rank;
 pub const Deck = struct {
     const deck_size = 24; // should always be 24. don't change...
 
-    card_buffer: []Card,
-    allocator: std.mem.Allocator,
+    // Deck has known size, no need to allocate anything
+    card_buffer: [deck_size]Card,
 
     deal_index: usize,
 
     const DeckError = error{
-        OutOfMemory,
-        DeckSizeNot24,
         NotEnoughCards,
     };
 
     /// Create an unshuffled deck object.
-    /// Caller is responsible for cleaning up deck's memory with `deinit`
-    pub fn init(allocator: std.mem.Allocator) DeckError!Deck {
+    pub fn new() DeckError!Deck {
         var deck = Deck {
-            .card_buffer = allocator.alloc(Card, deck_size) catch return DeckError.OutOfMemory,
-            .allocator = allocator,
+            .card_buffer = undefined,
             .deal_index = 0,
         };
-        errdefer allocator.free(deck.card_buffer);
 
         try Deck.fill_unshuffled(&deck.card_buffer);
 
         return deck;
     }
 
-    pub fn deinit(self: *Deck) void {
-        self.allocator.free(self.card_buffer);
-    }
 
-    pub fn fill_unshuffled(deck_buff: *[]Card) DeckError!void {
-        expect(deck_buff.*.len == deck_size) catch return DeckError.DeckSizeNot24;
+    pub fn fill_unshuffled(deck_buff: *[deck_size]Card) DeckError!void {
 
         var card_ind: usize = 0;
         inline for (Suit.Range()) |suit| {
@@ -89,8 +80,8 @@ const expect = std.testing.expect;
 const expectErr = std.testing.expectError;
 
 test "create_unshuffled" {
-    var deck = try Deck.init(std.testing.allocator);
-    defer deck.deinit();
+    var deck = try Deck.new();
+
     try expect(deck.card_buffer[0].eq(&Card{.suit=Suit.Spades, .rank=Rank.Nine}));
     try expect(deck.card_buffer[23].eq(&Card{.suit=Suit.Clubs, .rank=Rank.Ace}));
     try expect(deck.card_buffer.len == 24); 
@@ -98,8 +89,7 @@ test "create_unshuffled" {
 
 
 test "deal euchre deck" {
-    var deck = try Deck.init(std.testing.allocator);
-    defer deck.deinit();
+    var deck = try Deck.new();
 
     const hand1 = try deck.deal_five_cards();
     const expected_hand1 = [5]Card {try Card.from_str("S9"),

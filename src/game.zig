@@ -44,14 +44,14 @@ const Game = struct {
     /// Creates a game object. It is NOT ready to be played.
     /// 
     /// Caller is responsible for cleaning up game's memory with `deinit`
-    pub fn init(allocator: std.mem.Allocator) !Game {
+    pub fn new() !Game {
 
         return Game {
             .was_initialized = false,
             .is_over = false,
             .scores = null,
 
-            .deck = try Deck.init(allocator),
+            .deck = try Deck.new(),
 
             .players = undefined,
             .dealer_id = undefined,
@@ -103,11 +103,6 @@ const Game = struct {
         self.trump = null;
 
         self.actions_taken = .{null} ** 29;
-    }
-
-    /// Cleans up game object.
-    pub fn deinit(self: *Game) void {
-        self.deck.deinit();
     }
 
     /// Returns the order of the rest of the players if `p_id` is assumed to go first.

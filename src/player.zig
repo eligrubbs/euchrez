@@ -83,9 +83,7 @@ const expect = std.testing.expect;
 
 test "create_player" {
     const Deck = @import("deck.zig").Deck;
-    const alloc = std.testing.allocator;
-    var deck = try Deck.init(alloc);
-    defer deck.deinit();
+    var deck = try Deck.new();
 
     const five_cards = try deck.deal_five_cards();
 
@@ -104,9 +102,7 @@ test "create_player" {
 
 test "player_picks_up_and_discards" {
     const Deck = @import("deck.zig").Deck;
-    const alloc = std.testing.allocator;
-    var deck = try Deck.init(alloc);
-    defer deck.deinit();
+    var deck = try Deck.new();
 
     const five_cards = try deck.deal_five_cards();
 
