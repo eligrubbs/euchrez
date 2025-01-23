@@ -7,6 +7,7 @@ const Card = @import("card/card.zig").Card;
 const Suit = @import("card/suit.zig").Suit;
 const Rank = @import("card/rank.zig").Rank;
 const Deck = @import("deck.zig").Deck;
+const Action = @import("action.zig").Action;
 const Player = @import("player.zig").Player;
 const FlippedChoice = @import("actions.zig").FlippedChoice;
 
@@ -31,10 +32,13 @@ const Game = struct {
     center: ?[4:null]?*const Card,
     trump: ?Suit,
 
+    actions_taken: [29:null]?Action, // maximum number of actions there can be in a euchre game.
+
     const GameError = error {
         NotPlayable,
         CenterIsEmpty,
         TrumpNotSet,
+        NotTheLastTakenAction,
     };
 
     /// Creates a game object. It is NOT ready to be played.
@@ -60,6 +64,8 @@ const Game = struct {
             .order = undefined,
             .center = null,
             .trump = null,
+
+            .actions_taken = .{null} ** 29,
         };
 
     }
@@ -96,6 +102,7 @@ const Game = struct {
         self.center = null;
         self.trump = null;
 
+        self.actions_taken = .{null} ** 29;
     }
 
     /// Cleans up game object.
@@ -106,6 +113,18 @@ const Game = struct {
     /// Returns the order of the rest of the players if `p_id` is assumed to go first.
     fn order_starting_from(p_id: u2) [4]u2 {
         return .{p_id, p_id +% 1, p_id +% 2, p_id +% 3};
+    }
+
+    /// Return the id of the potential next player.  
+    /// Does not change game state.
+    fn next_player_is(self: *const Game) u2 {
+        return self.curr_player_id +% 1;
+    }
+
+    /// Return the id of the potential player before `curr_player_id`.
+    /// Does not change game state.
+    fn prev_player_is(self: *const Game) u2 {
+        return self.curr_player_id -% 1;
     }
 
     /// Returns the effective suit of the game?
@@ -139,4 +158,110 @@ const Game = struct {
             .Diamonds => .Hearts,
         };
     }
+
+    /// Returns the number of actions taken
+    fn num_actions_taken(self: *const Game) usize {
+        for (self.actions_taken, 0..) |act, count| {
+            if (act == null) return count;
+        }
+        return self.actions_taken.len;
+    }
+
+    /// Returns the most recent action taken or null if no actions have been taken
+    fn last_action(self: *const Game) ?Action {
+        const acts_taken = self.num_actions_taken();
+        if (acts_taken == 0) return null;
+        return self.actions_taken[acts_taken-1];
+    }
+
+    // //////
+    // / Game Logic
+    // /////
+
+    /// Take `action` and change the game state to reflect that.
+    pub fn step(self: *Game, action: Action) u2 {
+        switch (action) {
+            .Pick => 0,
+            .Pass => 0,
+            Action.Call => 1,
+            Action.Play => 2,
+            Action.Discard => 3,
+        }
+
+        return self.next_player_is();
+    }
+
+    /// Remove the affects of `action` from the game.
+    /// 
+    /// Will only allow this if `action` is the most previously played action
+    pub fn step_back(self: *Game, action: Action) GameError!u2 {
+        const the_last_action = self.last_action();
+        if (the_last_action == null or the_last_action.? != action) return GameError.NotTheLastTakenAction;
+
+        switch (action) {
+            .Pick => 0,
+            .Pass => 0,
+            Action.Call => 1,
+            Action.Play => 2,
+            Action.Discard => 3,
+        }
+
+        return self.next_player_is();
+    }
+
+
+
+    fn perform_pick_action(self: *Game) void {
+        _ = self;
+    }
+
+    /// undos this pick action. Assumes it is only called from a valid state
+    fn undo_pick_action(self: *Game) void {
+        _ = self;
+    }
+
+
+
+    fn perform_pass_action(self: *Game) void {
+        _ = self;
+    }
+
+    /// undos this pass action. Assumes it is only called from a valid state
+    fn undo_pass_action(self: *Game) void {
+        _ = self;
+    }
+
+
+
+    fn perform_call_action(self: *Game) void {
+        _ = self;
+    }
+
+    /// undos this call action. Assumes it is only called from a valid state
+    fn undo_call_action(self: *Game) void {
+        _ = self;
+    }
+
+
+
+    fn perform_play_action(self: *Game) void {
+        _ = self;
+    }
+
+    /// undos this play action. Assumes it is only called from a valid state
+    fn undo_play_action(self: *Game) void {
+        _ = self;
+    }
+
+
+
+    fn perform_discard_action(self: *Game) void {
+        _ = self;
+    }
+
+    /// undos this discard action. Assumes it is only called from a valid state
+    fn undo_discard_action(self: *Game) void {
+        _ = self;
+    }
+
 };
