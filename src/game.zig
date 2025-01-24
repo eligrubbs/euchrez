@@ -288,14 +288,23 @@ const Game = struct {
     }
 
 
-
-    fn perform_discard_action(self: *Game) void {
-        _ = self;
+    /// Changes the game state:
+    /// 1. sets current player to player left of dealer
+    /// 2. remove specified card from dealers hand
+    fn perform_discard_action(self: *Game, action: Action) void {
+        const card = try action.toCard();
+        try self.players[self.dealer_id].discard_card(&card);
+        self.curr_player_id = self.dealer_id +% 1;
     }
 
     /// undos this discard action. Assumes it is only called from a valid state
-    fn undo_discard_action(self: *Game) void {
-        _ = self;
+    /// 1. sets current player to dealer
+    /// 2. adds discarded card to dealers hand
+    fn undo_discard_action(self: *Game, action: Action) void {
+        const card = try action.toCard();
+        self.curr_player_id = self.dealer_id;
+        const deck_card = self.deck.find_card(&card);
+        self.players[self.dealer_id].pick_up_6th_card(deck_card);
     }
 
 };

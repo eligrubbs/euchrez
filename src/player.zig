@@ -55,7 +55,7 @@ pub const Player = struct {
                 self.hand[ind-1] = self.hand[ind];
                 self.hand[ind] = null;
             }
-            if (self.hand[ind] == card) {
+            if (self.hand[ind] != null and self.hand[ind].?.eq(card)) {
                 self.hand[ind] = null;
                 found = true;
             }
