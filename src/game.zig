@@ -249,14 +249,31 @@ const Game = struct {
     }
 
 
+    /// Changes to game state:
+    /// 1. Trump set to suit of flipped card
+    /// 2. current player becomes left of dealer
+    /// 3. calling player set to current player
+    fn perform_call_action(self: *Game, action: Action) void {
+        self.trump = switch (action) {
+            .CallSpades => Suit.Spades,
+            .CallHearts => Suit.Hearts,
+            .CallDiamonds => Suit.Diamonds,
+            .CallClubs => Suit.Clubs,
+            else => unreachable,
+        };
 
-    fn perform_call_action(self: *Game) void {
-        _ = self;
+        self.curr_player_id = self.dealer_id +% 1;
+        self.caller_id = self.curr_player_id;
     }
 
     /// undos this call action. Assumes it is only called from a valid state
+    /// 1. Sets trump to null
+    /// 2. current player becomes caller_id
+    /// 3. sets caller id to null
     fn undo_call_action(self: *Game) void {
-        _ = self;
+        self.trump = null;
+        self.curr_player_id = self.caller_id;
+        self.caller_id = null;
     }
 
 
