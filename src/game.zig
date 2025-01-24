@@ -9,7 +9,7 @@ const Rank = @import("card/rank.zig").Rank;
 const Deck = @import("deck.zig").Deck;
 const Action = @import("action.zig").Action;
 const Player = @import("player.zig").Player;
-const FlippedChoice = @import("actions.zig").FlippedChoice;
+const FlippedChoice = @import("action.zig").FlippedChoice;
 
 const Game = struct {
     const num_players = 4; // do not change
@@ -29,7 +29,7 @@ const Game = struct {
     flipped_choice: ?FlippedChoice,
 
     order: [4]u2,
-    center: ?[4:null]?*const Card,
+    center: ?[4:null]?*const Card, // 4 is maximum number of cards that can be in the middle
     trump: ?Suit,
 
     actions_taken: [29:null]?Action, // maximum number of actions there can be in a euchre game.
@@ -38,7 +38,8 @@ const Game = struct {
         NotPlayable,
         CenterIsEmpty,
         TrumpNotSet,
-        NotTheLastTakenAction,
+        GameHasNotStarted,
+        KittyCardNotAvailable,
     };
 
     /// Creates a game object. It is NOT ready to be played.
@@ -110,18 +111,6 @@ const Game = struct {
         return .{p_id, p_id +% 1, p_id +% 2, p_id +% 3};
     }
 
-    /// Return the id of the potential next player.  
-    /// Does not change game state.
-    fn next_player_is(self: *const Game) u2 {
-        return self.curr_player_id +% 1;
-    }
-
-    /// Return the id of the potential player before `curr_player_id`.
-    /// Does not change game state.
-    fn prev_player_is(self: *const Game) u2 {
-        return self.curr_player_id -% 1;
-    }
-
     /// Returns the effective suit of the game?
     /// If there is no effective suit, return null
     fn get_led_suit(self: *const Game) GameError!?Suit {
@@ -176,45 +165,67 @@ const Game = struct {
     /// Take `action` and change the game state to reflect that.
     pub fn step(self: *Game, action: Action) u2 {
         switch (action) {
-            .Pick => 0,
+            .Pick => self.perform_pick_action(),
             .Pass => 0,
             Action.Call => 1,
             Action.Play => 2,
             Action.Discard => 3,
         }
 
-        return self.next_player_is();
+        return self.curr_player_id;
     }
 
-    /// Remove the affects of `action` from the game.
-    /// 
-    /// Will only allow this if `action` is the most previously played action
-    pub fn step_back(self: *Game, action: Action) GameError!u2 {
+    /// Remove the affects of the last action taken in the game.
+    pub fn step_back(self: *Game) GameError!u2 {
         const the_last_action = self.last_action();
-        if (the_last_action == null or the_last_action.? != action) return GameError.NotTheLastTakenAction;
+        if (the_last_action == null) return GameError.GameHasNotStarted;
 
-        switch (action) {
-            .Pick => 0,
+        switch (the_last_action.?) {
+            .Pick => self.undo_pick_action(),
             .Pass => 0,
             Action.Call => 1,
             Action.Play => 2,
             Action.Discard => 3,
         }
 
-        return self.next_player_is();
+        return self.curr_player_id;
     }
 
 
 
+    /// Changes to game state:
+    /// 1. flipped card goes into dealers hand
+    /// 2. `curr_player_id` is changed to `dealer_id`
+    /// 3. player who called has their id saved into `caller_id`
+    /// 4. flipped choice is set to picked up
+    ///      - prevents this method from being called again
+    /// 5. Trump is set to suit of flipped card
+    /// 
+    /// State Validation:
+    /// 1. flipped choice must be null before making changes
     fn perform_pick_action(self: *Game) void {
-        _ = self;
+        if (self.flipped_choice != null) return GameError.KittyCardNotAvailable;
+
+        self.players[self.dealer_id].pick_up_6th_card(self.flipped_card);
+        self.curr_player_id = self.dealer_id;
+        self.caller_id = self.curr_player_id;
+        self.flipped_choice = FlippedChoice.PickedUp;
+        self.trump = self.flipped_card.suit;
     }
 
-    /// undos this pick action. Assumes it is only called from a valid state
+    /// Undos this pick action. Assumes it is only called from a valid state
+    /// 1. Removes flipped card from dealers hand
+    /// 2. `curr_player_id` is changed to `caller_id`
+    /// 3. `caller_id` is set to null
+    /// 4. flipped choice is set to null
+    /// 5. Trump is set to none
     fn undo_pick_action(self: *Game) void {
-        _ = self;
+        try self.players[self.dealer_id].discard_card(self.flipped_card);
+        self.curr_player_id = self.caller_id.?;
+        self.caller_id = null;
+        self.flipped_choice = null;
+        self.trump = null;
     }
-
 
 
     fn perform_pass_action(self: *Game) void {
@@ -260,3 +271,13 @@ const Game = struct {
     }
 
 };
+
+
+
+const expect = std.testing.expect;
+
+test "create_game" {
+    const game = try Game.new();
+
+    try expect(game.is_over == false);
+}

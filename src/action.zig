@@ -5,7 +5,7 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 
-const Action = enum(u6) {
+pub const Action = enum(u6) {
     pub const PickPass = utils.enumFieldRange(@This(), .Pick, .Pass);
     pub const Call = utils.enumFieldRange(@This(), .CallSpades, .CallClubs);
     pub const Play = utils.enumFieldRange(@This(), .PlayS9, .PlayCA);
@@ -54,7 +54,7 @@ const Action = enum(u6) {
 };
 
 
-const FlippedChoice = enum(u1) {
+pub const FlippedChoice = enum(u1) {
     PickedUp,
     TurnedDown,
 };

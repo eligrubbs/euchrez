@@ -1,7 +1,7 @@
 
 const Card = @import("card/card.zig").Card;
 
-const Player = struct {
+pub const Player = struct {
     id: u2,
     tricks: u3,
     hand: [6:null]?*const Card,
