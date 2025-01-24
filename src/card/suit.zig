@@ -4,9 +4,9 @@ pub const SuitError = error{InvalidChar};
 
 pub const Suit = enum(u2) {
     Spades,
-    Clubs,
-    Diamonds,
     Hearts,
+    Diamonds,
+    Clubs,
 
     pub fn eq(self: Suit, other: Suit) bool {
         return self == other;
