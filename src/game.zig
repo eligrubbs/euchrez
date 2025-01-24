@@ -40,6 +40,8 @@ const Game = struct {
         TrumpNotSet,
         GameHasNotStarted,
         KittyCardNotAvailable,
+        DealerMustCallAfterTurnedDownKittyCard,
+        TrumpAlreadySet,
     };
 
     /// Creates a game object. It is NOT ready to be played.
@@ -164,9 +166,11 @@ const Game = struct {
 
     /// Take `action` and change the game state to reflect that.
     pub fn step(self: *Game, action: Action) u2 {
+        // TODO, assert action is valid given state
+
         switch (action) {
             .Pick => self.perform_pick_action(),
-            .Pass => 0,
+            .Pass => self.perform_pass_action(),
             Action.Call => 1,
             Action.Play => 2,
             Action.Discard => 3,
@@ -182,7 +186,7 @@ const Game = struct {
 
         switch (the_last_action.?) {
             .Pick => self.undo_pick_action(),
-            .Pass => 0,
+            .Pass => self.undo_pass_action(),
             Action.Call => 1,
             Action.Play => 2,
             Action.Discard => 3,
@@ -200,11 +204,7 @@ const Game = struct {
     /// 4. flipped choice is set to picked up
     ///      - prevents this method from being called again
     /// 5. Trump is set to suit of flipped card
-    /// 
-    /// State Validation:
-    /// 1. flipped choice must be null before making changes
     fn perform_pick_action(self: *Game) void {
-        if (self.flipped_choice != null) return GameError.KittyCardNotAvailable;
 
         self.players[self.dealer_id].pick_up_6th_card(self.flipped_card);
         self.curr_player_id = self.dealer_id;
@@ -228,13 +228,24 @@ const Game = struct {
     }
 
 
-    fn perform_pass_action(self: *Game) void {
-        _ = self;
+    /// Changes to game state:
+    /// 1. if dealer, set flipped choice to turned down
+    /// 2. player is incremented by 1 wrapping
+    fn perform_pass_action(self: *Game) GameError!void {
+        if (self.curr_player_id == self.dealer_id)
+            self.flipped_choice = FlippedChoice.TurnedDown;
+
+        self.curr_player_id +%= 1;
     }
 
     /// undos this pass action. Assumes it is only called from a valid state
+    /// 1. if dealer, set flipped choice to null
+    /// 2. player is incremented by 1 wrapping
     fn undo_pass_action(self: *Game) void {
-        _ = self;
+        if (self.curr_player_id == self.dealer_id)
+            self.flipped_choice = null;
+
+        self.curr_player_id -%= 1;
     }
 
 
