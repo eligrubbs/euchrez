@@ -85,7 +85,7 @@ const Game = struct {
     /// 4. Creates 4 players and deals them 5 cards each
     /// 5. Sets dealer id to 0, curr player to 1, and calling_player to null
     /// 6. initializes flipped card and sets flipped choice to null
-    pub fn reset(self: *Game) void {
+    pub fn reset(self: *Game) !void {
         self.was_initialized = true;
 
         self.is_over = false;
@@ -93,9 +93,10 @@ const Game = struct {
 
         Deck.fill_unshuffled(&self.deck.card_buffer);
 
-        for (0..4) |ind| {
-            self.players[ind] = Player.init(ind, try self.deck.deal_five_cards());
-        }
+        self.players[0] = try Player.init(0, try self.deck.deal_five_cards());
+        self.players[1] = try Player.init(1, try self.deck.deal_five_cards());
+        self.players[2] = try Player.init(2, try self.deck.deal_five_cards());
+        self.players[3] = try Player.init(3, try self.deck.deal_five_cards());
 
         self.dealer_id = 0;
         self.curr_player_id = 1;
@@ -104,7 +105,7 @@ const Game = struct {
         self.flipped_card = try self.deck.deal_one_card();
         self.flipped_choice = null;
 
-        self.order = self.order_starting_from(self.curr_player_id);
+        self.order = Game.order_starting_from(self.curr_player_id);
         self.previous_last_in_order_id = null;
         self.center = empty_center;
         self.trump = null;
@@ -228,7 +229,57 @@ const Game = struct {
         return self.curr_player_id;
     }
 
+    /// Returns an array of size 6 containing all possible actions a player can take.  
+    /// The array is 6 long because at most a player can have 6 choices at once, never more.
+    pub fn get_legal_actions(self: *const Game) [6:null]?Action {
+        var result = .{null} ** 6;
+        const active_player = &self.players[self.curr_player_id];
 
+        var play_hand: bool = true;
+
+        if (active_player.cards_left() == 6) { // dealer must discard
+            play_hand = false;
+            // exit control flow, will translate whole hand into result for discard action at bottom.
+        } else if (self.trump == null) { // deciding trump
+            if (self.flipped_choice == null) { // flipped card available
+                result[0] = Action.Pick;
+                result[1] = Action.Pass;
+            } else { // else flipped_choice is TurnedDown, because PickedUp would set trump. All but dealer can pass
+                result = .{Action.CallSpades, Action.CallHearts, Action.CallDiamonds, Action.CallClubs, null, null};
+                const turned_down_suit_ind: usize = @intFromEnum(self.flipped_card.suit);
+                result[turned_down_suit_ind] = result[3];
+                result[3] = if (self.curr_player_id == self.dealer_id) null else Action.Pass;
+            }
+            return result;
+        } else if ((try self.get_led_suit()) == null) { 
+            // can play any card, exit control flow 
+        } else { // either must follow suit, or play any card
+            const led_suit = (try self.get_led_suit()).?;
+            const num_led_suit_in_hand = 0;
+            for (0..active_player.cards_left()) |ind| {
+                const curr_card = active_player.hand[ind].?;
+
+                const is_left: bool = (try self.is_left_bower(curr_card));
+                const is_led_suit: bool = curr_card.suit.eq(led_suit);
+                if ((!is_left and is_led_suit) or (is_left and self.trump == led_suit)) {
+                    num_led_suit_in_hand += 1;
+                    result[ind] = Action.fromCard(curr_card, true);
+                }
+            }
+
+            if (num_led_suit_in_hand > 0) return result; // must follow suit
+            // exit control flow, can play any card
+        }
+
+        // Here only if I can't follow suit, or I am leading, or I may discard any card in my hand. 
+        // Either way I will go through my whole hand.
+        for (0..6) |ind| {
+            const curr_card = active_player.hand[ind];
+            result[ind] = if (curr_card == null) null else Action.fromCard(curr_card.?, play_hand);
+        }
+
+        return result;
+    }
 
     /// Changes to game state:
     /// 1. flipped card goes into dealers hand
@@ -388,7 +439,7 @@ const Game = struct {
         self.players[winner_id].award_trick();
 
         self.previous_last_in_order_id = self.order[3];
-        self.order = self.order_starting_from(winner_id);
+        self.order = Game.order_starting_from(winner_id);
 
         self.center = empty_center;
 
@@ -468,7 +519,7 @@ const Game = struct {
 const expect = std.testing.expect;
 
 test "create_game" {
-    const game = try Game.new();
-
+    var game = try Game.new();
+    try game.reset();
     try expect(game.is_over == false);
 }

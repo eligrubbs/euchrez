@@ -25,7 +25,7 @@ pub const Deck = struct {
             .deal_index = 0,
         };
 
-        try Deck.fill_unshuffled(&deck.card_buffer);
+        Deck.fill_unshuffled(&deck.card_buffer);
 
         return deck;
     }
@@ -40,7 +40,7 @@ pub const Deck = struct {
         unreachable;
     }
 
-    pub fn fill_unshuffled(deck_buff: *[deck_size]Card) DeckError!void {
+    pub fn fill_unshuffled(deck_buff: *[deck_size]Card) void {
         var card_ind: usize = 0;
         inline for (Suit.Range()) |suit| {
             inline for (Rank.Range()) |rank| {
