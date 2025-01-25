@@ -191,10 +191,16 @@ const Game = struct {
 
         switch (action) {
             .Pick => self.perform_pick_action(),
-            .Pass => self.perform_pass_action(),
-            Action.Call => 1,
-            Action.Play => 2,
-            Action.Discard => 3,
+            .Pass => try self.perform_pass_action(),
+            Action.Call => self.perform_call_action(action),
+            Action.Play => {
+                try self.perform_play_action(action);
+
+                if (self.num_cards_in_center() == 4) {
+                    self.reflect_end_trick();
+                }
+            },
+            Action.Discard => self.perform_discard_action(action),
         }
 
         return self.curr_player_id;
@@ -362,19 +368,27 @@ const Game = struct {
 
 
     /// Changes the game state
-    /// 1. determines winner of trick
+    /// 1. determines winner of trick. Sets current player to winner
     /// 2. Sets previous end of order id
     /// 3. updates order based on winner
     /// 4. empties center
+    /// 5. Decide if the game is over and handle points as well
     fn reflect_end_trick(self: *Game) void {
         // TODO determine trick winner
         const winner_id = 0; // TODO
+        self.curr_player_id = winner_id;
 
         self.previous_last_in_order_id = self.order[3];
         self.order = self.order_starting_from(winner_id);
 
         self.center = empty_center;
+
+        // the winner having no more cards implies no one has cards
+        if (self.players[self.curr_player_id].cards_left() == 0) {
+            self.is_over = true;
+        }
     }
+
 };
 
 
