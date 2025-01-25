@@ -395,6 +395,7 @@ const Game = struct {
         // the winner having no more cards implies no one has cards
         if (self.players[self.curr_player_id].cards_left() == 0) {
             self.is_over = true;
+            self.scores = self.score_round();
         }
     }
 
@@ -437,8 +438,27 @@ const Game = struct {
 
 
     /// At the end of the game, determine the scores based on the 5 tricks
-    fn judge_round(self: *Game) void {
-        _ = self;
+    fn score_round(self: *Game) [4]u3 {
+        const team_1_tricks: u3 = self.players[0].get_tricks() + self.players[2].get_tricks();
+        const team_1_called: bool = if (self.caller_id % 2 == 0) true else false;
+
+        return if (team_1_tricks == 5) { // team 1 swept
+            .{2, 0, 2, 0};
+        } else if (team_1_tricks >= 3) {
+            if (team_1_called) { // team 1 won and called no sweep
+                .{1, 0, 1, 0};
+            } else {
+                .{2, 0, 2, 0}; // team 1 euchred team 2
+            }
+        } else if (team_1_tricks > 0) {
+            if (team_1_called) { // team 2 euchred team 1
+                .{0, 2, 0, 2};
+            } else {
+                .{0, 1, 0, 1}; // team 2 won and called no sweep
+            }
+        } else { // team 2 swept
+            .{0, 2, 0, 2};
+        };
     }
 
 };
