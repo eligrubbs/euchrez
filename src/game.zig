@@ -43,6 +43,7 @@ const Game = struct {
         KittyCardNotAvailable,
         DealerMustCallAfterTurnedDownKittyCard,
         TrumpAlreadySet,
+        ActionNotPreviouslyTaken,
     };
 
     /// Creates a game object. It is NOT ready to be played.
@@ -170,6 +171,16 @@ const Game = struct {
         return self.actions_taken[acts_taken-1];
     }
 
+    fn ind_of_action_taken(self: *const Game, action: Action) GameError!usize {
+        inline for (self.actions_taken, 0..) |act, ind| {
+            if (act == null) return GameError.ActionNotPreviouslyTaken;
+            if (act != null and act.? == action) {
+                return ind;
+            }
+        }
+        return GameError.ActionNotPreviouslyTaken;
+    }
+
     // //////
     // / Game Logic
     // /////
@@ -287,14 +298,46 @@ const Game = struct {
     }
 
 
+    /// Changes the game state:
+    /// 1. removes played card from players hand
+    /// 2. adds played card to center
+    /// 3. sets current player to player left of current (player_id is one higher, wrapped)
+    ///     - If this player plays the 4th (last) card of the trick, another method will overwrite this
+    fn perform_play_action(self: *Game, action: Action) !void {
+        const card = try action.toCard();
+        try self.players[self.curr_player_id].discard_card(&card);
 
-    fn perform_play_action(self: *Game) void {
-        _ = self;
+        const open_center_ind = self.num_cards_in_center();
+        self.center[open_center_ind] = self.deck.find_card(&card);
+ 
+        self.curr_player_id +%= 1;
     }
 
     /// undos this play action. Assumes it is only called from a valid state
-    fn undo_play_action(self: *Game) void {
-        _ = self;
+    /// 1. Depending on whether the last played card ended a trick or not...
+    ///     - if it did:
+    ///         - reset curr_player_id to previous end-of-order player
+    ///         - reset center to be full of the 3 cards that came before this one
+    ///     - if it did NOT:
+    ///         - reset curr_player_id to be one less than current (wrapped)
+    ///         - set latest card in center to null
+    /// 2. puts the card played back in curr players hand
+    fn undo_play_action(self: *Game, action: Action) Player.PlayerError!void {
+        if (self.num_cards_in_center() == 0) {
+            self.curr_player_id = self.previous_last_in_order_id.?;
+            const act_ind = try self.ind_of_action_taken(action);
+    
+            inline for (1..4) |offset| {
+                const act_card = try self.actions_taken[act_ind-offset].?.toCard();
+                self.center[3-offset] = self.deck.find_card(&act_card);
+            }
+        } else {
+            self.curr_player_id -%= 1;
+            self.center[self.num_cards_in_center()-1] = null;
+        }
+
+        const card = try action.toCard();
+        try self.players[self.curr_player_id].put_card_back_in_hand(self.deck.find_card(&card));
     }
 
 

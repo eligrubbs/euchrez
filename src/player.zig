@@ -8,6 +8,7 @@ pub const Player = struct {
 
     const PlayerError = error {
         InitialHandNot5Cards,
+        HandFull,
         CardNotPresent,
         AlgorithmError,
     };
