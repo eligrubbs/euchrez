@@ -13,6 +13,7 @@ const FlippedChoice = @import("action.zig").FlippedChoice;
 
 const Game = struct {
     const num_players = 4; // do not change
+    const empty_center: [4:null]?*const Card = .{null} ** 4;
 
     was_initialized: bool, // make sure that reset is called before calling other methods
     is_over: bool,
@@ -66,7 +67,7 @@ const Game = struct {
 
             .order = undefined,
             .previous_last_in_order_id = null,
-            .center = .{null} ** 4,
+            .center = empty_center,
             .trump = null,
 
             .actions_taken = .{null} ** 29,
@@ -104,7 +105,7 @@ const Game = struct {
 
         self.order = self.order_starting_from(self.curr_player_id);
         self.previous_last_in_order_id = null;
-        self.center = .{null} ** 4;
+        self.center = empty_center;
         self.trump = null;
 
         self.actions_taken = .{null} ** 29;
@@ -316,6 +317,21 @@ const Game = struct {
         self.players[self.dealer_id].pick_up_6th_card(deck_card);
     }
 
+
+    /// Changes the game state
+    /// 1. determines winner of trick
+    /// 2. Sets previous end of order id
+    /// 3. updates order based on winner
+    /// 4. empties center
+    fn reflect_end_trick(self: *Game) void {
+        // TODO determine trick winner
+        const winner_id = 0; // TODO
+
+        self.previous_last_in_order_id = self.order[3];
+        self.order = self.order_starting_from(winner_id);
+
+        self.center = empty_center;
+    }
 };
 
 
