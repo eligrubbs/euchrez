@@ -15,6 +15,8 @@ const Game = struct {
     const num_players = 4; // do not change
     const empty_center: [4:null]?*const Card = .{null} ** 4;
 
+    config: GameConfig,
+
     was_initialized: bool, // make sure that reset is called before calling other methods
     is_over: bool,
     scores: ?[4]u3, // scores not null only at end of game
@@ -45,14 +47,19 @@ const Game = struct {
         DealerMustCallAfterTurnedDownKittyCard,
         TrumpAlreadySet,
         ActionNotPreviouslyTaken,
+    } || Player.PlayerError || Card.CardError || Action.ActionError;
+
+    pub const GameConfig = struct {
+        verbose: bool = false
     };
 
     /// Creates a game object. It is NOT ready to be played.
     /// 
     /// Caller is responsible for cleaning up game's memory with `deinit`
-    pub fn new() !Game {
+    pub fn new(config: GameConfig) !Game {
 
         return Game {
+            .config = config,
             .was_initialized = false,
             .is_over = false,
             .scores = null,
@@ -87,6 +94,7 @@ const Game = struct {
     /// 5. Sets dealer id to 0, curr player to 1, and calling_player to null
     /// 6. initializes flipped card and sets flipped choice to null
     pub fn reset(self: *Game) !void {
+
         self.was_initialized = true;
 
         self.is_over = false;
@@ -121,10 +129,8 @@ const Game = struct {
 
     /// Returns the effective suit of the game
     /// If there is no effective suit, return null
-    fn get_led_suit(self: *const Game) GameError!?Suit {
-        if (self.center[0] == null) return null;
-
-        if (self.trump == null) return GameError.TrumpNotSet;
+    fn get_led_suit(self: *const Game) ?Suit {
+        if (self.center[0] == null or self.trump == null) return null;
 
         const led_card = self.center[0].?;
         if (self.is_left_bower(led_card)) {
@@ -133,15 +139,19 @@ const Game = struct {
         return led_card.suit;
     }
 
-    fn is_left_bower(self: *const Game, card: *const Card) GameError!bool {
-        if (self.trump == null) return GameError.TrumpNotSet;
+    /// Returns true if the card is the left bower.
+    /// false if trump is not set, or if card is not left bower given that trump is set.
+    fn is_left_bower(self: *const Game, card: *const Card) bool {
+        if (self.trump == null) return false;
 
         return (card.rank.eq(Rank.Jack) and 
-                self.left_bower_suit(self.trump.?).eq(card.suit));
+                Game.left_bower_suit(self.trump.?).eq(card.suit));
     }
 
-    fn is_right_bower(self: *const Game, card: *const Card) GameError!bool {
-        if (self.trump == null) return GameError.TrumpNotSet;
+    /// Returns true if the card is the right bower.
+    /// false if trump is not set, or if card is not right bower given that trump is set.
+    fn is_right_bower(self: *const Game, card: *const Card) bool {
+        if (self.trump == null) return false;
 
         return (card.rank.eq(Rank.Jack) and card.suit.eq(self.trump.?));
     }
@@ -204,18 +214,20 @@ const Game = struct {
         }
         if (!legal) return GameError.ActionNotLegalGivenGameState;
 
-        switch (action) {
-            .Pick => self.perform_pick_action(),
-            .Pass => try self.perform_pass_action(),
-            Action.Call => self.perform_call_action(action),
-            Action.Play => {
+        switch (@intFromEnum(action) ) {
+            @intFromEnum(Action.Pick) => self.perform_pick_action(),
+            @intFromEnum(Action.Pass) => try self.perform_pass_action(),
+            // Action.Call => self.perform_call_action(action),
+            @intFromEnum(Action.CallSpades)...@intFromEnum(Action.CallClubs)=> self.perform_call_action(action),
+            @intFromEnum(Action.PlayS9)...@intFromEnum(Action.PlayCA) => {
                 try self.perform_play_action(action);
 
                 if (self.num_cards_in_center() == 4) {
                     self.reflect_end_trick();
                 }
             },
-            Action.Discard => self.perform_discard_action(action),
+            @intFromEnum(Action.DiscardS9)...@intFromEnum(Action.DiscardCA) => try self.perform_discard_action(action),
+            else => unreachable,
         }
 
         // Record that I have taken this action
@@ -244,7 +256,7 @@ const Game = struct {
     /// Returns an array of size 6 containing all possible actions a player can take.  
     /// The array is 6 long because at most a player can have 6 choices at once, never more.
     pub fn get_legal_actions(self: *const Game) [6:null]?Action {
-        var result = .{null} ** 6;
+        var result: [6:null]?Action = .{null} ** 6;
         const active_player = &self.players[self.curr_player_id];
 
         var play_hand: bool = true;
@@ -263,19 +275,19 @@ const Game = struct {
                 result[3] = if (self.curr_player_id == self.dealer_id) null else Action.Pass;
             }
             return result;
-        } else if ((try self.get_led_suit()) == null) { 
+        } else if (self.get_led_suit() == null) { 
             // can play any card, exit control flow 
         } else { // either must follow suit, or play any card
-            const led_suit = (try self.get_led_suit()).?;
-            const num_led_suit_in_hand = 0;
+            const led_suit = self.get_led_suit().?;
+            var num_led_suit_in_hand: u3 = 0;
             for (0..active_player.cards_left()) |ind| {
                 const curr_card = active_player.hand[ind].?;
 
-                const is_left: bool = (try self.is_left_bower(curr_card));
+                const is_left: bool = self.is_left_bower(curr_card);
                 const is_led_suit: bool = curr_card.suit.eq(led_suit);
                 if ((!is_left and is_led_suit) or (is_left and self.trump == led_suit)) {
+                    result[num_led_suit_in_hand] = Action.fromCard(curr_card, true);
                     num_led_suit_in_hand += 1;
-                    result[ind] = Action.fromCard(curr_card, true);
                 }
             }
 
@@ -421,7 +433,7 @@ const Game = struct {
     /// Changes the game state:
     /// 1. sets current player to player left of dealer
     /// 2. remove specified card from dealers hand
-    fn perform_discard_action(self: *Game, action: Action) void {
+    fn perform_discard_action(self: *Game, action: Action) !void {
         const card = try action.toCard();
         try self.players[self.dealer_id].discard_card(&card);
         self.curr_player_id = self.dealer_id +% 1;
@@ -475,7 +487,7 @@ const Game = struct {
                 return false;
             }
             return true;
-        } else if (left_effective_suit.eq(self.trump)) {
+        } else if (left_effective_suit.eq(self.trump.?)) {
             return false;
         }
         return false;
@@ -503,25 +515,25 @@ const Game = struct {
     /// At the end of the game, determine the scores based on the 5 tricks
     fn score_round(self: *Game) [4]u3 {
         const team_1_tricks: u3 = self.players[0].get_tricks() + self.players[2].get_tricks();
-        const team_1_called: bool = if (self.caller_id % 2 == 0) true else false;
+        const team_1_called: bool = if (self.caller_id.? % 2 == 0) true else false;
 
-        return if (team_1_tricks == 5) { // team 1 swept
-            .{2, 0, 2, 0};
+        if (team_1_tricks == 5) { // team 1 swept
+            return .{2, 0, 2, 0};
         } else if (team_1_tricks >= 3) {
             if (team_1_called) { // team 1 won and called no sweep
-                .{1, 0, 1, 0};
+                return .{1, 0, 1, 0};
             } else {
-                .{2, 0, 2, 0}; // team 1 euchred team 2
+                return .{2, 0, 2, 0}; // team 1 euchred team 2
             }
         } else if (team_1_tricks > 0) {
             if (team_1_called) { // team 2 euchred team 1
-                .{0, 2, 0, 2};
+                return .{0, 2, 0, 2};
             } else {
-                .{0, 1, 0, 1}; // team 2 won and called no sweep
+                return .{0, 1, 0, 1}; // team 2 won and called no sweep
             }
         } else { // team 2 swept
-            .{0, 2, 0, 2};
-        };
+            return .{0, 2, 0, 2};
+        }
     }
 
 };
@@ -531,7 +543,14 @@ const Game = struct {
 const expect = std.testing.expect;
 
 test "create_game" {
-    var game = try Game.new();
+    var game = try Game.new(.{ .verbose = false });
     try game.reset();
     try expect(game.is_over == false);
+
+    for (0..29) |_| {
+        if (game.is_over == true) break;
+        const acts = game.get_legal_actions();
+        _ = try game.step(acts[0].?);
+        std.debug.print("{any}\n", .{acts});
+    }
 }

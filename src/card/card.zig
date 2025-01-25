@@ -3,11 +3,13 @@
 const Suit = @import("suit.zig").Suit;
 const Rank = @import("rank.zig").Rank;
 
-pub const CardError = error{InvalidSuitChar, InvalidRankChar};
 
 pub const Card = struct {
     suit: Suit,
     rank: Rank,
+
+    
+    pub const CardError = error{InvalidSuitChar, InvalidRankChar};
 
     pub fn str(self: Card) [2]u8 {
         return [2]u8{self.suit.char(), self.rank.char()};
@@ -45,10 +47,10 @@ test "from_string" {
     str_repr = "TT";
     const dude = Card.from_str(str_repr);
 
-    try expect(dude == CardError.InvalidSuitChar);
+    try expect(dude == Card.CardError.InvalidSuitChar);
 
     str_repr = "SS";
     const dude2 = Card.from_str(str_repr);
 
-    try expect(dude2 == CardError.InvalidRankChar);
+    try expect(dude2 == Card.CardError.InvalidRankChar);
 }

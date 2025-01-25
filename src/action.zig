@@ -3,17 +3,12 @@
 // or potentially deep learning algorithms
 
 const std = @import("std");
-const utils = @import("utils.zig");
 
 const Card = @import("card/card.zig").Card;
 const Suit = @import("card/suit.zig").Suit;
 const Rank = @import("card/rank.zig").Rank;
 
 pub const Action = enum(u6) {
-    pub const PickPass = utils.enumFieldRange(@This(), .Pick, .Pass);
-    pub const Call = utils.enumFieldRange(@This(), .CallSpades, .CallClubs);
-    pub const Play = utils.enumFieldRange(@This(), .PlayS9, .PlayCA);
-    pub const Discard = utils.enumFieldRange(@This(), .DiscardS9, .DiscardCA);
 
     const total_actions = 54; // do not change
 
@@ -35,7 +30,7 @@ pub const Action = enum(u6) {
     DiscardD9, DiscardDT, DiscardDJ, DiscardDQ, DiscardDK, DiscardDA,
     DiscardC9, DiscardCT, DiscardCJ, DiscardCQ, DiscardCK, DiscardCA,
 
-    const ActionError = error{
+    pub const ActionError = error{
         IntOutOfRange,
         StrNotConvertable,
         NotConvertableToCard,

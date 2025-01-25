@@ -6,7 +6,7 @@ pub const Player = struct {
     tricks: u3,
     hand: [6:null]?*const Card,
 
-    const PlayerError = error {
+    pub const PlayerError = error {
         InitialHandNot5Cards,
         HandFull,
         CardNotPresent,
@@ -60,11 +60,10 @@ pub const Player = struct {
         var found: bool = false;
         for (0..6) |ind| {
             if (found) {
-                expect(self.hand[ind-1] == null) catch return PlayerError.AlgorithmError;
+                // if(self.hand[ind-1] == null) return PlayerError.AlgorithmError;
                 self.hand[ind-1] = self.hand[ind];
                 self.hand[ind] = null;
-            }
-            if (self.hand[ind] != null and self.hand[ind].?.eq(card)) {
+            } else if (self.hand[ind] != null and self.hand[ind].?.eq(card)) {
                 self.hand[ind] = null;
                 found = true;
             }

@@ -15,7 +15,7 @@ pub const Rank = enum(u4) {
     }
 
     pub fn gt(self: Rank, other: Rank) bool {
-        self > other;
+        return @intFromEnum(self) > @intFromEnum(other);
     }
 
     pub fn char(self: Rank) u8 {
