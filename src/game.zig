@@ -134,8 +134,14 @@ const Game = struct {
     fn is_left_bower(self: *const Game, card: *const Card) GameError!bool {
         if (self.trump == null) return GameError.TrumpNotSet;
 
-        return (card.rank.eq(Rank.from_char('J')) and 
-                self.left_bower_suit(self.trump.?) == card.suit);
+        return (card.rank.eq(Rank.Jack) and 
+                self.left_bower_suit(self.trump.?).eq(card.suit));
+    }
+
+    fn is_right_bower(self: *const Game, card: *const Card) GameError!bool {
+        if (self.trump == null) return GameError.TrumpNotSet;
+
+        return (card.rank.eq(Rank.Jack) and card.suit.eq(self.trump.?));
     }
 
     /// Given a trump suit, returns the suit whose Jack is considered trump 
@@ -321,7 +327,8 @@ const Game = struct {
 
     /// undos this play action. Assumes it is only called from a valid state
     /// 1. Depending on whether the last played card ended a trick or not...
-    ///     - if it did:
+    ///     - if it did: (current player won last trick)
+    ///         - takes away trick given to winner
     ///         - reset curr_player_id to previous end-of-order player
     ///         - reset center to be full of the 3 cards that came before this one
     ///     - if it did NOT:
@@ -330,6 +337,7 @@ const Game = struct {
     /// 2. puts the card played back in curr players hand
     fn undo_play_action(self: *Game, action: Action) Player.PlayerError!void {
         if (self.num_cards_in_center() == 0) {
+            try self.players[self.curr_player_id].take_away_trick();
             self.curr_player_id = self.previous_last_in_order_id.?;
             const act_ind = try self.ind_of_action_taken(action);
     
@@ -371,12 +379,13 @@ const Game = struct {
     /// 1. determines winner of trick. Sets current player to winner
     /// 2. Sets previous end of order id
     /// 3. updates order based on winner
-    /// 4. empties center
-    /// 5. Decide if the game is over and handle points as well
+    /// 4. Awards the winner a trick
+    /// 5. empties center
+    /// 6. Decide if the game is over and handle points as well
     fn reflect_end_trick(self: *Game) void {
-        // TODO determine trick winner
-        const winner_id = 0; // TODO
+        const winner_id = self.judge_trick();
         self.curr_player_id = winner_id;
+        self.players[winner_id].award_trick();
 
         self.previous_last_in_order_id = self.order[3];
         self.order = self.order_starting_from(winner_id);
@@ -387,6 +396,49 @@ const Game = struct {
         if (self.players[self.curr_player_id].cards_left() == 0) {
             self.is_over = true;
         }
+    }
+
+
+    /// Consideres the current trump, and determines if the left card is lower than the right card.
+    /// Assumes that this is only called when trump is set.
+    fn left_card_lower_than_right(self: *const Game, lhs: *const Card, rhs: *const Card) bool {
+        const left_effective_suit = if (self.is_left_bower(lhs)) self.trump.? else lhs.suit;
+        const right_effective_suit = if (self.is_left_bower(rhs)) self.trump.? else rhs.suit;
+
+        if (left_effective_suit == right_effective_suit) {
+            // if left has a greater rank, or is right bower, return false
+            if (lhs.rank.gt(rhs.rank) or self.is_right_bower(lhs)) {
+                return false;
+            }
+            return true;
+        } else if (left_effective_suit.eq(self.trump)) {
+            return false;
+        }
+        return false;
+    }
+
+
+    /// Returns the player_id of the winner.
+    /// 
+    /// Assumes the game is in a state where center has 4 cards.  
+    /// Leverages that indices of cards in center match the id of who played them in `self.order`
+    fn judge_trick(self: *Game) u2 {
+        var best_player: u2 = self.order[0];
+        var best_card: *const Card = self.center[0].?;
+
+        for (1..4) |ind| {
+            if (self.left_card_lower_than_right(best_card, self.center[ind].?)) {
+                best_card = self.center[ind].?;
+                best_player = self.order[ind];
+            }
+        }
+        return best_player;
+    }
+
+
+    /// At the end of the game, determine the scores based on the 5 tricks
+    fn judge_round(self: *Game) void {
+        _ = self;
     }
 
 };

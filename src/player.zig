@@ -11,6 +11,7 @@ pub const Player = struct {
         HandFull,
         CardNotPresent,
         AlgorithmError,
+        NoTricksToRemove,
     };
 
     /// Creates an empty player object
@@ -78,6 +79,11 @@ pub const Player = struct {
 
     pub fn award_trick(self: *Player) void {
         self.tricks += 1;
+    }
+
+    pub fn take_away_trick(self: *Player) PlayerError!void {
+        if (self.tricks == 0) return PlayerError.NoTricksToRemove;
+        self.tricks -= 1;
     }
 
     pub fn get_tricks(self: *const Player) u3 {
