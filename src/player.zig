@@ -44,6 +44,13 @@ pub const Player = struct {
         self.hand[5] = card;
     }
 
+    /// Designed to be used to undo a previous play action involving `card`
+    pub fn put_card_back_in_hand(self: *Player, card: *const Card) PlayerError!void {
+        const open_ind = self.cards_left();
+        if (open_ind == 6) return PlayerError.HandFull;
+        self.hand[open_ind] = card;
+    }
+
     /// Removes a card from the players hand.
     /// 
     /// Shifts all cards to the right of that spot over.

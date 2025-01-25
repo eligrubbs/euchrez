@@ -30,7 +30,7 @@ pub const Deck = struct {
         return deck;
     }
 
-    /// returns the pointer to the card in the deck that matches the value of card passed in
+    /// returns the pointer to the card in the deck that matches the value of card passed in.  
     /// Guranteed to find the card since all euchre cards are in the deck once and only once.
     pub fn find_card(self: *const Deck, card: *const Card) *const Card {
         for (0..deck_size) |card_ind| {

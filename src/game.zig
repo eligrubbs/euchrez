@@ -29,14 +29,14 @@ const Game = struct {
     flipped_choice: ?FlippedChoice,
 
     order: [4]u2,
-    center: ?[4:null]?*const Card, // 4 is maximum number of cards that can be in the middle
+    previous_last_in_order_id: ?u2, // used only for undoing play actions
+    center: [4:null]?*const Card, // 4 is maximum number of cards that can be in the middle
     trump: ?Suit,
 
     actions_taken: [29:null]?Action, // maximum number of actions there can be in a euchre game.
 
     const GameError = error {
         NotPlayable,
-        CenterIsEmpty,
         TrumpNotSet,
         GameHasNotStarted,
         KittyCardNotAvailable,
@@ -65,7 +65,8 @@ const Game = struct {
             .flipped_choice = null,
 
             .order = undefined,
-            .center = null,
+            .previous_last_in_order_id = null,
+            .center = .{null} ** 4,
             .trump = null,
 
             .actions_taken = .{null} ** 29,
@@ -102,7 +103,8 @@ const Game = struct {
         self.flipped_choice = null;
 
         self.order = self.order_starting_from(self.curr_player_id);
-        self.center = null;
+        self.previous_last_in_order_id = null;
+        self.center = .{null} ** 4;
         self.trump = null;
 
         self.actions_taken = .{null} ** 29;
@@ -113,15 +115,14 @@ const Game = struct {
         return .{p_id, p_id +% 1, p_id +% 2, p_id +% 3};
     }
 
-    /// Returns the effective suit of the game?
+    /// Returns the effective suit of the game
     /// If there is no effective suit, return null
     fn get_led_suit(self: *const Game) GameError!?Suit {
-        if (self.center == null) return null;
+        if (self.center[0] == null) return null;
 
         if (self.trump == null) return GameError.TrumpNotSet;
-        if (self.center.?[0] == null) return GameError.CenterIsEmpty;
 
-        const led_card = self.center.?[0].?;
+        const led_card = self.center[0].?;
         if (self.is_left_bower(led_card)) {
                 return self.trump;
         }
@@ -147,10 +148,18 @@ const Game = struct {
 
     /// Returns the number of actions taken
     fn num_actions_taken(self: *const Game) usize {
-        for (self.actions_taken, 0..) |act, count| {
+        inline for (self.actions_taken, 0..) |act, count| {
             if (act == null) return count;
         }
         return self.actions_taken.len;
+    }
+
+    /// Returns the number of cards in the center
+    fn num_cards_in_center(self: *const Game) usize {
+        inline for (self.center, 0..) |card, count| {
+            if (card == null) return count;
+        }
+        return self.center.len;
     }
 
     /// Returns the most recent action taken or null if no actions have been taken
