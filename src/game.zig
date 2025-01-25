@@ -37,6 +37,7 @@ const Game = struct {
     actions_taken: [29:null]?Action, // maximum number of actions there can be in a euchre game.
 
     const GameError = error {
+        ActionNotLegalGivenGameState,
         NotPlayable,
         TrumpNotSet,
         GameHasNotStarted,
@@ -193,8 +194,15 @@ const Game = struct {
     // /////
 
     /// Take `action` and change the game state to reflect that.
-    pub fn step(self: *Game, action: Action) u2 {
-        // TODO, assert action is valid given state
+    pub fn step(self: *Game, action: Action) GameError!u2 {
+        const legal_acts = self.get_legal_actions();
+        var legal = false;
+        for (legal_acts) |act| {
+            if (act != null and act.? == action) {
+                legal = true;
+            }
+        }
+        if (!legal) return GameError.ActionNotLegalGivenGameState;
 
         switch (action) {
             .Pick => self.perform_pick_action(),
@@ -210,6 +218,9 @@ const Game = struct {
             Action.Discard => self.perform_discard_action(action),
         }
 
+        // Record that I have taken this action
+        self.actions_taken[self.num_actions_taken()] = action;
+
         return self.curr_player_id;
     }
 
@@ -217,13 +228,14 @@ const Game = struct {
     pub fn step_back(self: *Game) GameError!u2 {
         const the_last_action = self.last_action();
         if (the_last_action == null) return GameError.GameHasNotStarted;
+        self.actions_taken[self.num_actions_taken()-1] = null;
 
         switch (the_last_action.?) {
             .Pick => self.undo_pick_action(),
             .Pass => self.undo_pass_action(),
-            Action.Call => 1,
-            Action.Play => 2,
-            Action.Discard => 3,
+            Action.Call => self.undo_call_action(),
+            Action.Play => self.undo_play_action(the_last_action),
+            Action.Discard => self.undo_discard_action(the_last_action),
         }
 
         return self.curr_player_id;
