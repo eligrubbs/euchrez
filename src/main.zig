@@ -10,10 +10,21 @@ const Game = lib.Game;
 
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const start = try std.time.Instant.now();
+
+    const stdout_file = std.io.getStdOut().writer();
+    var bw = std.io.bufferedWriter(stdout_file);
+    const stdout = bw.writer();
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     const allocator = gpa.allocator();
 
-    const games: []Game = try allocator.alloc(Game, 1);
+    const num_games = 10_000_000;
+
+    
+    try stdout.print("Starting {d} games of Euchre.\n", .{num_games});
+
+    const games: []Game = try allocator.alloc(Game, num_games);
     defer allocator.free(games);
 
     for (0..games.len) |game_ind| {
@@ -33,17 +44,11 @@ pub fn main() !void {
 
     // std.debug.print("Vars: {s}\n", .{vars.get("PATH").?});
 
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    const elapsed_ns = (try std.time.Instant.now()).since(start);
+    const elapsed_ms = elapsed_ns/std.time.ns_per_ms;
+    const elapsed_s = elapsed_ns/std.time.ns_per_s;
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
-
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    try stdout.print("Duration: {}s {}ms\n", .{elapsed_s, elapsed_ms % std.time.ms_per_s});
 
     try bw.flush(); // Don't forget to flush!
 }
