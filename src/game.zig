@@ -568,6 +568,25 @@ test "create_game" {
         if (game.is_over == true) break;
         const acts = game.get_legal_actions();
         _ = try game.step(acts[0].?);
-        std.debug.print("{any}\n", .{acts});
+        // std.debug.print("{any}\n", .{acts});
+    }
+    try expect(game.is_over == true);
+
+}
+
+
+test "play 10,000 games" {
+    // Instead of testing the code verbosely for runtime errors, I will run 10,000 games
+    const num_games = 10_000;
+
+    for (0..num_games) |_| {
+        var game = try Game.new(.{ .verbose = false});
+        try game.reset();
+        for (0..29) |_| {
+            if (game.is_over == true) break;
+            const acts = game.get_legal_actions();
+            _ = try game.step(acts[0].?);
+        }
+        try expect(game.is_over == true);
     }
 }
