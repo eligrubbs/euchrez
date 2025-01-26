@@ -56,7 +56,7 @@ pub const Rank = enum(u4) {
 
             pub fn new() IterDef {
                 return IterDef {
-                    .ranks = Rank.RankRange(),
+                    .ranks = Rank.range,
                     .index = 0,
                 };
             }
@@ -73,9 +73,9 @@ pub const Rank = enum(u4) {
 
 
 
-const expect = @import("std").testing.expect;
-
 test "get_char" {
+    const expect = @import("std").testing.expect;
+
     const rank = Rank.Nine;
 
     try expect(rank.char() == '9');

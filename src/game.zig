@@ -512,9 +512,10 @@ pub const Game = struct {
 
 
 
-const expect = std.testing.expect;
 
 test "create_game" {
+    const expect = std.testing.expect;
+
     var game = try Game.new(.{ .verbose = false, .seed = 42});
     try game.reset();
     try expect(game.is_over == false);
@@ -531,6 +532,8 @@ test "create_game" {
 
 
 test "play 10,000 games" {
+    const expect = std.testing.expect;
+
     // Instead of testing the code verbosely for runtime errors, I will run 10,000 games
     const num_games = 10_000;
 

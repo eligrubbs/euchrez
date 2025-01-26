@@ -75,7 +75,7 @@ pub const Suit = enum(u2) {
             /// ```
             pub fn new() IterDef {
                 return IterDef {
-                    .suits = Suit.range(),
+                    .suits = Suit.range,
                     .index = 0,
                 };
             }

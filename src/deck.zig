@@ -14,7 +14,7 @@ pub const Deck = struct {
 
     deal_index: usize,
 
-    const DeckError = error{
+    pub const DeckError = error{
         NotEnoughCards,
     };
 
@@ -82,10 +82,11 @@ pub const Deck = struct {
     }
 };
 
-const expect = std.testing.expect;
-const expectErr = std.testing.expectError;
+
 
 test "create_unshuffled" {
+    const expect = std.testing.expect;
+
     var deck = try Deck.new();
 
     try expect(deck.card_buffer[0].eq(&Card{ .suit = Suit.Spades, .rank = Rank.Nine }));
@@ -94,6 +95,9 @@ test "create_unshuffled" {
 }
 
 test "deal euchre deck" {
+    const expect = std.testing.expect;
+    const expectErr = std.testing.expectError;
+
     var deck = try Deck.new();
 
     const hand1 = try deck.deal_five_cards();

@@ -74,15 +74,18 @@ pub const Card = struct {
 };
 
 
-const expect = @import("std").testing.expect;
-const mem_eq = @import("std").mem.eql;
 
 test "print_card" {
+    const expect = @import("std").testing.expect;
+    const mem_eq = @import("std").mem.eql;
+
     const card = Card{.suit=Suit.Spades, .rank=Rank.Ten};
     try expect(mem_eq(u8, &card.str(), "ST") );
 }
 
 test "from_string" {
+    const expect = @import("std").testing.expect;
+
     var str_repr = "SA";
     var card = try Card.from_str(str_repr);
     var truth = Card{.suit = Suit.Spades, .rank = Rank.Ace};
@@ -101,6 +104,8 @@ test "from_string" {
 }
 
 test "is_left" {
+    const expect = @import("std").testing.expect;
+
     var trump = Suit.Spades;
 
     var card = try Card.from_str("H9");
@@ -123,6 +128,8 @@ test "is_left" {
 }
 
 test "cards_greater_than" {
+    const expect = @import("std").testing.expect;
+
     // Test No Trump
     var card1 = try Card.from_str("S9");
     var card2 = try Card.from_str("S9");

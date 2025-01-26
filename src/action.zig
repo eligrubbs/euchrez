@@ -78,10 +78,12 @@ pub const FlippedChoice = enum(u1) {
 };
 
 
-const expect = std.testing.expect;
-const expectErr = std.testing.expectError;
+
 
 test "action_from_str" {
+    const expect = std.testing.expect;
+    const expectErr = std.testing.expectError;
+
     const act_str = "Pick";
 
     const act = try Action.fromStr(act_str[0..]);
@@ -92,6 +94,8 @@ test "action_from_str" {
 }
 
 test "action_from_card" {
+    const expect = std.testing.expect;
+
     var card = try Card.from_str("S9");
 
     var act = Action.fromCard(&card, true);
@@ -110,6 +114,8 @@ test "action_from_card" {
 }
 
 test "card_from_action" {
+    const expect = std.testing.expect;
+
     var act = Action.PlayC9;
     const card = try act.toCard();
     try expect(card.eq(&try Card.from_str("C9")));
