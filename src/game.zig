@@ -11,7 +11,7 @@ const Action = @import("action.zig").Action;
 const Player = @import("player.zig").Player;
 const FlippedChoice = @import("action.zig").FlippedChoice;
 
-const Game = struct {
+pub const Game = struct {
     const num_players = 4; // do not change
     const empty_center: [4:null]?*const Card = .{null} ** 4;
 
