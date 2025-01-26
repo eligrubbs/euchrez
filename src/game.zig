@@ -150,37 +150,10 @@ pub const Game = struct {
         if (self.center[0] == null or self.trump == null) return null;
 
         const led_card = self.center[0].?;
-        if (self.is_left_bower(led_card)) {
+        if (led_card.isLeftBower(self.trump.?)) {
                 return self.trump;
         }
         return led_card.suit;
-    }
-
-    /// Returns true if the card is the left bower.
-    /// false if trump is not set, or if card is not left bower given that trump is set.
-    fn is_left_bower(self: *const Game, card: *const Card) bool {
-        if (self.trump == null) return false;
-
-        return (card.rank.eq(Rank.Jack) and 
-                Game.left_bower_suit(self.trump.?).eq(card.suit));
-    }
-
-    /// Returns true if the card is the right bower.
-    /// false if trump is not set, or if card is not right bower given that trump is set.
-    fn is_right_bower(self: *const Game, card: *const Card) bool {
-        if (self.trump == null) return false;
-
-        return (card.rank.eq(Rank.Jack) and card.suit.eq(self.trump.?));
-    }
-
-    /// Given a trump suit, returns the suit whose Jack is considered trump 
-    fn left_bower_suit(trump: Suit) Suit {
-        return switch (trump) {
-            .Spades => .Clubs,
-            .Clubs => .Spades,
-            .Hearts => .Diamonds,
-            .Diamonds => .Hearts,
-        };
     }
 
     /// Returns the number of actions taken
@@ -300,7 +273,7 @@ pub const Game = struct {
             for (0..active_player.cards_left()) |ind| {
                 const curr_card = active_player.hand[ind].?;
 
-                const is_left: bool = self.is_left_bower(curr_card);
+                const is_left: bool = curr_card.isLeftBower(self.trump.?);
                 const is_led_suit: bool = curr_card.suit.eq(led_suit);
                 if ((!is_left and is_led_suit) or (is_left and self.trump == led_suit)) {
                     result[num_led_suit_in_hand] = Action.fromCard(curr_card, true);
@@ -492,25 +465,6 @@ pub const Game = struct {
     }
 
 
-    /// Consideres the current trump, and determines if the left card is lower than the right card.
-    /// Assumes that this is only called when trump is set.
-    fn left_card_lower_than_right(self: *const Game, lhs: *const Card, rhs: *const Card) bool {
-        const left_effective_suit = if (self.is_left_bower(lhs)) self.trump.? else lhs.suit;
-        const right_effective_suit = if (self.is_left_bower(rhs)) self.trump.? else rhs.suit;
-
-        if (left_effective_suit == right_effective_suit) {
-            // if left has a greater rank, or is right bower, return false
-            if (lhs.rank.gt(rhs.rank) or self.is_right_bower(lhs)) {
-                return false;
-            }
-            return true;
-        } else if (left_effective_suit.eq(self.trump.?)) {
-            return false;
-        }
-        return false;
-    }
-
-
     /// Returns the player_id of the winner.
     /// 
     /// Assumes the game is in a state where center has 4 cards.  
@@ -520,7 +474,8 @@ pub const Game = struct {
         var best_card: *const Card = self.center[0].?;
 
         for (1..4) |ind| {
-            if (self.left_card_lower_than_right(best_card, self.center[ind].?)) {
+            const card_comparison = self.center[ind].?.gt(best_card, self.trump.?);
+            if (card_comparison != null and card_comparison.?) {
                 best_card = self.center[ind].?;
                 best_player = self.order[ind];
             }

@@ -58,7 +58,7 @@ pub const Card = struct {
 
     /// Given a trump suit, return true if this card is the left bower.
     pub fn isLeftBower(self: *const Card, trump: Suit) bool {
-        return (self.rank == Rank.Jack) and self.suit == trump.BrotherSuit();
+        return (self.rank == Rank.Jack) and self.suit == trump.LeftBowerSuit();
     }
 
     /// Given a trump suit, return true if this card is the right bower

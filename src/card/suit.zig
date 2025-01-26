@@ -31,9 +31,8 @@ pub const Suit = enum(u2) {
         };
     }
 
-    /// Returns the brother suit of `self`.  
-    /// This is the suit of the left bower is `self` is trump.
-    pub fn BrotherSuit(self: Suit) Suit {
+    /// Returns the the suit of the left bower taking `self` as trump.
+    pub fn LeftBowerSuit(self: Suit) Suit {
         return switch (self) {
             .Spades => Suit.Clubs,
             .Hearts => Suit.Diamonds,
