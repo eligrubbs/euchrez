@@ -10,6 +10,10 @@ pub const Rank = enum(u4) {
     King = 13,
     Ace = 14,
 
+    /// Constant for-loop-able array of suits. For consistency, 
+    /// this range is referenced everywhere something like this could be.
+    pub const range:  [6]Rank = [6]Rank{Rank.Nine, Rank.Ten, Rank.Jack, Rank.Queen, Rank.King, Rank.Ace};
+
     pub fn eq(self: Rank, other: Rank) bool {
         return self == other;
     }
@@ -39,12 +43,6 @@ pub const Rank = enum(u4) {
             'A' => .Ace,
             else => RankError.InvalidChar,
         };
-    }
-
-    /// Constant for-loop-able array of suits. For consistency, 
-    /// this range is referenced everywhere something like this could be.
-    pub fn Range() [6]Rank {
-        return [6]Rank{Rank.Nine, Rank.Ten, Rank.Jack, Rank.Queen, Rank.King, Rank.Ace};
     }
 
     pub fn Iterator() type {

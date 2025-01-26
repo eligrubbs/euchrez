@@ -8,6 +8,12 @@ pub const Suit = enum(u2) {
     Diamonds,
     Clubs,
 
+    /// Constant for-loop-able array of suits. For consistency, 
+    /// this range is referenced everywhere something like this could be.
+    /// 
+    /// The order follows the reverse alphabetical convention of some types of Poker
+    pub const range: [4]Suit = [4]Suit{Suit.Spades, Suit.Hearts, Suit.Diamonds, Suit.Clubs,};
+
     pub fn eq(self: Suit, other: Suit) bool {
         return self == other;
     }
@@ -42,16 +48,13 @@ pub const Suit = enum(u2) {
     }
 
     
-    /// Constant for-loop-able array of suits. For consistency, 
-    /// this range is referenced everywhere something like this could be.
-    /// 
-    /// The order follows the reverse alphabetical convention of some types of Poker
-    pub fn Range() [4]Suit {
-        return [4]Suit{Suit.Spades, Suit.Hearts, Suit.Diamonds, Suit.Clubs,};
-    }
+
+    // pub fn range() [4]Suit {
+    //     return [4]Suit{Suit.Spades, Suit.Hearts, Suit.Diamonds, Suit.Clubs,};
+    // }
 
     /// Iterator for suits.  
-    /// In same order as `Suit.Range()` 
+    /// In same order as `Suit.range()` 
     /// 
     /// Recommended use is to call `new()`, although an explicit map can be made.
     pub fn Iterator() type {
@@ -71,7 +74,7 @@ pub const Suit = enum(u2) {
             /// ```
             pub fn new() IterDef {
                 return IterDef {
-                    .suits = Suit.Range(),
+                    .suits = Suit.range(),
                     .index = 0,
                 };
             }
@@ -86,15 +89,18 @@ pub const Suit = enum(u2) {
 };
 
 
-const expect = @import("std").testing.expect;
 
 test "create_suit" {
+    const expect = @import("std").testing.expect;
+
     const suit = Suit.Clubs;
 
     try expect(suit == Suit.Clubs);
 }
 
 test "suits_equal" {
+    const expect = @import("std").testing.expect;
+
     const left = Suit.Spades;
     const right = Suit.Spades;
     const diff = Suit.Hearts;
@@ -105,9 +111,11 @@ test "suits_equal" {
 }
 
 test "suits_iter" {
+    const expect = @import("std").testing.expect;
+
     const suit_order: [4]Suit = [4]Suit{Suit.Spades, Suit.Hearts, Suit.Diamonds, Suit.Clubs,};
 
-    for (Suit.Range(), 0..) |suit, ind| {
+    for (Suit.range, 0..) |suit, ind| {
         try expect(suit_order[ind] == suit);
     }
 

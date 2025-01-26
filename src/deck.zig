@@ -42,8 +42,8 @@ pub const Deck = struct {
 
     pub fn fill_unshuffled(deck_buff: *[deck_size]Card) void {
         var card_ind: usize = 0;
-        inline for (Suit.Range()) |suit| {
-            inline for (Rank.Range()) |rank| {
+        inline for (Suit.range) |suit| {
+            inline for (Rank.range) |rank| {
                 deck_buff.*[card_ind] = Card{ .suit = suit, .rank = rank };
                 card_ind += 1;
             }
