@@ -31,6 +31,17 @@ pub const Suit = enum(u2) {
         };
     }
 
+    /// Returns the brother suit of `self`.  
+    /// This is the suit of the left bower is `self` is trump.
+    pub fn BrotherSuit(self: Suit) Suit {
+        return switch (self) {
+            .Spades => Suit.Clubs,
+            .Hearts => Suit.Diamonds,
+            .Diamonds => Suit.Hearts,
+            .Clubs => Suit.Spades,
+        };
+    }
+
     
     /// Constant for-loop-able array of suits. For consistency, 
     /// this range is referenced everywhere something like this could be.
@@ -75,13 +86,6 @@ pub const Suit = enum(u2) {
     }
 };
 
-
-
-//
-//
-// Tests Below
-//
-//
 
 const expect = @import("std").testing.expect;
 
