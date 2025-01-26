@@ -1,6 +1,6 @@
 // Implementation of card ranks in common playing cards
 
-pub const RankError = error{InvalidChar};
+
 
 pub const Rank = enum(u4) {
     Nine = 9,
@@ -13,6 +13,8 @@ pub const Rank = enum(u4) {
     /// Constant for-loop-able array of suits. For consistency, 
     /// this range is referenced everywhere something like this could be.
     pub const range:  [6]Rank = [6]Rank{Rank.Nine, Rank.Ten, Rank.Jack, Rank.Queen, Rank.King, Rank.Ace};
+
+    pub const RankError = error{InvalidChar};
 
     pub fn eq(self: Rank, other: Rank) bool {
         return self == other;

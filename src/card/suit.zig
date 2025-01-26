@@ -1,6 +1,5 @@
 // Implementation of Suits of common playing cards
 
-pub const SuitError = error{InvalidChar};
 
 pub const Suit = enum(u2) {
     Spades,
@@ -13,6 +12,8 @@ pub const Suit = enum(u2) {
     /// 
     /// The order follows the reverse alphabetical convention of some types of Poker
     pub const range: [4]Suit = [4]Suit{Suit.Spades, Suit.Hearts, Suit.Diamonds, Suit.Clubs,};
+    
+    pub const SuitError = error{InvalidChar};
 
     pub fn eq(self: Suit, other: Suit) bool {
         return self == other;
