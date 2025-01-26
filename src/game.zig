@@ -16,6 +16,7 @@ const Game = struct {
     const empty_center: [4:null]?*const Card = .{null} ** 4;
 
     config: GameConfig,
+    prng: std.Random.DefaultPrng,
 
     was_initialized: bool, // make sure that reset is called before calling other methods
     is_over: bool,
@@ -50,7 +51,8 @@ const Game = struct {
     } || Player.PlayerError || Card.CardError || Action.ActionError;
 
     pub const GameConfig = struct {
-        verbose: bool = false
+        verbose: bool = false,
+        seed: ?u64 = null,
     };
 
     /// Creates a game object. It is NOT ready to be played.
@@ -60,6 +62,13 @@ const Game = struct {
 
         return Game {
             .config = config,
+            .prng = std.Random.DefaultPrng.init(blk: {
+                var seed: u64 = undefined;
+                if (config.seed == null) {
+                    try std.posix.getrandom(std.mem.asBytes(&seed));
+                } else {seed = config.seed.?;}
+                break :blk seed;
+            }),
             .was_initialized = false,
             .is_over = false,
             .scores = null,
@@ -94,6 +103,13 @@ const Game = struct {
     /// 5. Sets dealer id to 0, curr player to 1, and calling_player to null
     /// 6. initializes flipped card and sets flipped choice to null
     pub fn reset(self: *Game) !void {
+        self.prng = std.Random.DefaultPrng.init(blk: {
+                var seed: u64 = undefined;
+                if (self.config.seed == null) {
+                    try std.posix.getrandom(std.mem.asBytes(&seed));
+                } else {seed = self.config.seed.?;}
+                break :blk seed;
+        });
 
         self.was_initialized = true;
 
@@ -101,14 +117,15 @@ const Game = struct {
         self.scores = null;
 
         Deck.fill_unshuffled(&self.deck.card_buffer);
+        self.prng.random().shuffle(Card, &self.deck.card_buffer);
 
         self.players[0] = try Player.init(0, try self.deck.deal_five_cards());
         self.players[1] = try Player.init(1, try self.deck.deal_five_cards());
         self.players[2] = try Player.init(2, try self.deck.deal_five_cards());
         self.players[3] = try Player.init(3, try self.deck.deal_five_cards());
 
-        self.dealer_id = 0;
-        self.curr_player_id = 1;
+        self.dealer_id = self.prng.random().int(u2);
+        self.curr_player_id = self.dealer_id +% 1;
         self.caller_id = null;
 
         self.flipped_card = try self.deck.deal_one_card();
@@ -543,7 +560,7 @@ const Game = struct {
 const expect = std.testing.expect;
 
 test "create_game" {
-    var game = try Game.new(.{ .verbose = false });
+    var game = try Game.new(.{ .verbose = false, .seed = 42});
     try game.reset();
     try expect(game.is_over == false);
 
