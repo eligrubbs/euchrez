@@ -8,12 +8,10 @@ const std = @import("std");
 const lib = @import("euchrez_lib");
 const Game = lib.Game;
 
+const stdout_file = std.io.getStdOut().writer();
 
 pub fn main() !void {
 
-    const start = try std.time.Instant.now();
-
-    const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
 
@@ -21,9 +19,11 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     const num_games = 1_000_000;
-
     
     try stdout.print("Starting {d} games of Euchre.\n", .{num_games});
+    try bw.flush();
+
+    const start = try std.time.Instant.now();
 
     const games: []Game = try allocator.alloc(Game, num_games);
     defer allocator.free(games);
@@ -42,7 +42,6 @@ pub fn main() !void {
 
     var vars = try std.process.getEnvMap(allocator);
     defer vars.deinit();
-
     // std.debug.print("Vars: {s}\n", .{vars.get("PATH").?});
 
     const elapsed_ns = (try std.time.Instant.now()).since(start);
@@ -50,6 +49,5 @@ pub fn main() !void {
     const elapsed_s = elapsed_ns/std.time.ns_per_s;
 
     try stdout.print("Duration: {}s {}ms\n", .{elapsed_s, elapsed_ms % std.time.ms_per_s});
-
     try bw.flush(); // Don't forget to flush!
 }
