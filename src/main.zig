@@ -10,6 +10,7 @@ const Game = lib.Game;
 
 
 pub fn main() !void {
+
     const start = try std.time.Instant.now();
 
     const stdout_file = std.io.getStdOut().writer();
@@ -19,7 +20,7 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     const allocator = gpa.allocator();
 
-    const num_games = 10_000_000;
+    const num_games = 1_000_000;
 
     
     try stdout.print("Starting {d} games of Euchre.\n", .{num_games});
