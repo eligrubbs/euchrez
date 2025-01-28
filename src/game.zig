@@ -13,7 +13,7 @@ const FlippedChoice = @import("action.zig").FlippedChoice;
 
 pub const Game = struct {
     const num_players = 4; // do not change
-    const empty_center: [4:null]?*const Card = .{null} ** 4;
+    const empty_center: [4:null]?Card = .{null} ** 4;
 
     config: GameConfig,
     prng: std.Random.DefaultPrng,
@@ -29,12 +29,12 @@ pub const Game = struct {
     curr_player_id: u2,
     caller_id: ?u2,
 
-    flipped_card: *const Card,
+    flipped_card: Card,
     flipped_choice: ?FlippedChoice,
 
     order: [4]u2,
     previous_last_in_order_id: ?u2, // used only for undoing play actions
-    center: [4:null]?*const Card, // 4 is maximum number of cards that can be in the middle
+    center: [4:null]?Card, // 4 is maximum number of cards that can be in the middle
     trump: ?Suit,
 
     actions_taken: [29:null]?Action, // maximum number of actions there can be in a euchre game.
@@ -382,10 +382,10 @@ pub const Game = struct {
     ///     - If this player plays the 4th (last) card of the trick, another method will overwrite this
     fn perform_play_action(self: *Game, action: Action) !void {
         const card = try action.toCard();
-        try self.players[self.curr_player_id].discard_card(&card);
+        try self.players[self.curr_player_id].discard_card(card);
 
         const open_center_ind = self.num_cards_in_center();
-        self.center[open_center_ind] = self.deck.find_card(&card);
+        self.center[open_center_ind] = card;
  
         self.curr_player_id +%= 1;
     }
@@ -408,7 +408,7 @@ pub const Game = struct {
     
             inline for (1..4) |offset| {
                 const act_card = try self.actions_taken[act_ind-offset].?.toCard();
-                self.center[3-offset] = self.deck.find_card(&act_card);
+                self.center[3-offset] = act_card;
             }
         } else {
             self.curr_player_id -%= 1;
@@ -416,7 +416,7 @@ pub const Game = struct {
         }
 
         const card = try action.toCard();
-        try self.players[self.curr_player_id].put_card_back_in_hand(self.deck.find_card(&card));
+        try self.players[self.curr_player_id].put_card_back_in_hand(card);
     }
 
 
@@ -425,7 +425,7 @@ pub const Game = struct {
     /// 2. remove specified card from dealers hand
     fn perform_discard_action(self: *Game, action: Action) !void {
         const card = try action.toCard();
-        try self.players[self.dealer_id].discard_card(&card);
+        try self.players[self.dealer_id].discard_card(card);
         self.curr_player_id = self.dealer_id +% 1;
     }
 
@@ -435,7 +435,7 @@ pub const Game = struct {
     fn undo_discard_action(self: *Game, action: Action) void {
         const card = try action.toCard();
         self.curr_player_id = self.dealer_id;
-        const deck_card = self.deck.find_card(&card);
+        const deck_card = card;
         self.players[self.dealer_id].pick_up_6th_card(deck_card);
     }
 
@@ -471,7 +471,7 @@ pub const Game = struct {
     /// Leverages that indices of cards in center match the id of who played them in `self.order`
     fn judge_trick(self: *Game) u2 {
         var best_player: u2 = self.order[0];
-        var best_card: *const Card = self.center[0].?;
+        var best_card: Card = self.center[0].?;
 
         for (1..4) |ind| {
             const card_comparison = self.center[ind].?.gt(best_card, self.trump.?);

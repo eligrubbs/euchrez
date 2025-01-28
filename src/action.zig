@@ -52,7 +52,7 @@ pub const Action = enum(u6) {
         return ActionError.StrNotConvertable;
     }
 
-    pub fn fromCard(card: *const Card, to_play: bool ) Action {
+    pub fn fromCard(card: Card, to_play: bool ) Action {
         const suit_num: u6 = @as(u6, @intFromEnum(card.suit)) + 1;
         const rank_num: u6 = @intFromEnum(card.rank) - 9;
         const discard_offset: u6 = if (to_play == true) 0 else 24;
@@ -98,18 +98,18 @@ test "action_from_card" {
 
     var card = try Card.from_str("S9");
 
-    var act = Action.fromCard(&card, true);
+    var act = Action.fromCard(card, true);
     try expect(act == Action.PlayS9);
 
-    var act_d = Action.fromCard(&card, false);
+    var act_d = Action.fromCard(card, false);
     try expect(act_d == Action.DiscardS9);
 
     card = try Card.from_str("CA");
 
-    act = Action.fromCard(&card, true);
+    act = Action.fromCard(card, true);
     try expect(act == Action.PlayCA);
 
-    act_d = Action.fromCard(&card, false);
+    act_d = Action.fromCard(card, false);
     try expect(act_d == Action.DiscardCA);
 }
 
@@ -118,5 +118,5 @@ test "card_from_action" {
 
     var act = Action.PlayC9;
     const card = try act.toCard();
-    try expect(card.eq(&try Card.from_str("C9")));
+    try expect(card.eq(try Card.from_str("C9")));
 }
