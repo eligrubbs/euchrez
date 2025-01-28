@@ -8,7 +8,7 @@ When built with `-Doptimize=ReleaseFast`:
 
 |    Games   | Time to play (sec, ms) |
 |  --------  |  ----------------  |
-|  10,000    |        0s 40ms       |
-|  100,000   |        0s 320ms       |
-|  1,000,000   |        3s 156ms       |
-|  10,000,000 |        32s 494ms      |
+|  10,000    |        0s 24ms       |
+|  100,000   |        0s 220ms       |
+|  1,000,000   |        2s 240ms       |
+|  10,000,000 |        22s 600ms      |

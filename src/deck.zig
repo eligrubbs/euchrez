@@ -30,12 +30,12 @@ pub const Deck = struct {
         return deck;
     }
 
-    /// returns the pointer to the card in the deck that matches the value of card passed in.  
+    /// Return a copy of the card in the deck that matches the value of card passed in.  
     /// Guranteed to find the card since all euchre cards are in the deck once and only once.
-    pub fn find_card(self: *const Deck, card: *const Card) *const Card {
+    pub fn find_card(self: *const Deck, card: Card) Card {
         for (0..deck_size) |card_ind| {
             if (self.card_buffer[card_ind].eq(card))
-                return &self.card_buffer[card_ind];
+                return self.card_buffer[card_ind];
         }
         unreachable;
     }
@@ -63,22 +63,22 @@ pub const Deck = struct {
         return self.card_buffer[(self.deal_index - 5)..self.deal_index];
     }
 
-    /// Return a reference to the next undealt card.
+    /// Return a copy of the next undealt card.
     /// Does not deal the card.
-    pub fn peek_at_top_card(self: *Deck) DeckError!*const Card {
+    pub fn peek_at_top_card(self: *Deck) DeckError!Card {
         if (self.deal_index >= deck_size) return DeckError.NotEnoughCards;
-        return &self.card_buffer[self.deal_index];
+        return self.card_buffer[self.deal_index];
     }
 
-    /// Return a reference to the next undealt card.
+    /// Return a copy of the next undealt card.
     /// Increments `deal_index` by 1 so this card can't be dealt again.
     ///
     /// The card is NOT removed from the deck's memory buffer.
     ///
-    pub fn deal_one_card(self: *Deck) DeckError!*const Card {
+    pub fn deal_one_card(self: *Deck) DeckError!Card {
         if (self.deal_index >= deck_size) return DeckError.NotEnoughCards;
         self.deal_index += 1;
-        return &self.card_buffer[self.deal_index - 1];
+        return self.card_buffer[self.deal_index - 1];
     }
 };
 
@@ -89,8 +89,8 @@ test "create_unshuffled" {
 
     var deck = try Deck.new();
 
-    try expect(deck.card_buffer[0].eq(&Card{ .suit = Suit.Spades, .rank = Rank.Nine }));
-    try expect(deck.card_buffer[23].eq(&Card{ .suit = Suit.Clubs, .rank = Rank.Ace }));
+    try expect(deck.card_buffer[0].eq(Card{ .suit = Suit.Spades, .rank = Rank.Nine }));
+    try expect(deck.card_buffer[23].eq(Card{ .suit = Suit.Clubs, .rank = Rank.Ace }));
     try expect(deck.card_buffer.len == 24);
 }
 
@@ -103,25 +103,25 @@ test "deal euchre deck" {
     const hand1 = try deck.deal_five_cards();
     const expected_hand1 = [5]Card{ try Card.from_str("S9"), try Card.from_str("ST"), try Card.from_str("SJ"), try Card.from_str("SQ"), try Card.from_str("SK") };
     for (expected_hand1, 0..) |card, ind| {
-        try expect(card.eq(&hand1[ind]));
+        try expect(card.eq(hand1[ind]));
     }
 
     const hand2 = try deck.deal_five_cards();
     const expected_hand2 = [5]Card{ try Card.from_str("SA"), try Card.from_str("H9"), try Card.from_str("HT"), try Card.from_str("HJ"), try Card.from_str("HQ") };
     for (expected_hand2, 0..) |card, ind| {
-        try expect(card.eq(&hand2[ind]));
+        try expect(card.eq(hand2[ind]));
     }
 
     const hand3 = try deck.deal_five_cards();
     const expected_hand3 = [5]Card{ try Card.from_str("HK"), try Card.from_str("HA"), try Card.from_str("D9"), try Card.from_str("DT"), try Card.from_str("DJ") };
     for (expected_hand3, 0..) |card, ind| {
-        try expect(card.eq(&hand3[ind]));
+        try expect(card.eq(hand3[ind]));
     }
 
     const hand4 = try deck.deal_five_cards();
     const expected_hand4 = [5]Card{ try Card.from_str("DQ"), try Card.from_str("DK"), try Card.from_str("DA"), try Card.from_str("C9"), try Card.from_str("CT") };
     for (expected_hand4, 0..) |card, ind| {
-        try expect(card.eq(&hand4[ind]));
+        try expect(card.eq(hand4[ind]));
     }
 
     // cant deal any more cards
