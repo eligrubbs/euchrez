@@ -30,16 +30,6 @@ pub const Deck = struct {
         return deck;
     }
 
-    /// Return a copy of the card in the deck that matches the value of card passed in.  
-    /// Guranteed to find the card since all euchre cards are in the deck once and only once.
-    pub fn find_card(self: *const Deck, card: Card) Card {
-        for (0..deck_size) |card_ind| {
-            if (self.card_buffer[card_ind].eq(card))
-                return self.card_buffer[card_ind];
-        }
-        unreachable;
-    }
-
     pub fn fill_unshuffled(deck_buff: *[deck_size]Card) void {
         var card_ind: usize = 0;
         inline for (Suit.range) |suit| {
