@@ -100,17 +100,17 @@ test "create_player" {
     const Deck = @import("deck.zig").Deck;
     var deck = try Deck.new();
 
-    const five_cards = try deck.deal_five_cards();
+    const five_cards = try deck.DealFiveCards();
 
     const player = try Player.init(0, five_cards);
 
     try expect(player.id == 0);
     try expect(player.cards_left() == 5);
     try expect(player.hand[5] == null);
-    try expect(player.hand[0].?.eq(try Card.from_str("S9") ));
+    try expect(player.hand[0].?.eq(try Card.FromStr("S9") ));
 
     // Testing that the players hand has copy of those in the deck
-    const new_card = try Card.from_str("HT");
+    const new_card = try Card.FromStr("HT");
     deck.card_buffer[0] = new_card;
     try expect(!player.hand[0].?.eq(new_card));
 }
@@ -119,11 +119,11 @@ test "player_picks_up_and_discards" {
     const Deck = @import("deck.zig").Deck;
     var deck = try Deck.new();
 
-    const five_cards = try deck.deal_five_cards();
+    const five_cards = try deck.DealFiveCards();
 
     var player = try Player.init(0, five_cards);
 
-    const pickup_card = try deck.deal_one_card();
+    const pickup_card = try deck.DealOneCard();
     player.pick_up_6th_card(pickup_card);
 
     try expect(player.cards_left() == 6);

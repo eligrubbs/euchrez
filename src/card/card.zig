@@ -15,10 +15,10 @@ pub const Card = struct {
         return [2]u8{self.suit.char(), self.rank.char()};
     }
 
-    pub fn from_str(string: *const [2]u8) CardError!Card {
+    pub fn FromStr(string: *const [2]u8) CardError!Card {
         
-        const suit = Suit.from_char(string[0]) catch return CardError.InvalidSuitChar;
-        const rank = Rank.from_char(string[1]) catch return CardError.InvalidRankChar;
+        const suit = Suit.FromChar(string[0]) catch return CardError.InvalidSuitChar;
+        const rank = Rank.FromChar(string[1]) catch return CardError.InvalidRankChar;
 
         return Card{.suit = suit, .rank = rank};
     }
@@ -87,18 +87,18 @@ test "from_string" {
     const expect = @import("std").testing.expect;
 
     var str_repr = "SA";
-    const card = try Card.from_str(str_repr);
+    const card = try Card.FromStr(str_repr);
     var truth = Card{.suit = Suit.Spades, .rank = Rank.Ace};
 
     try expect(truth.eq(card));
 
     str_repr = "TT";
-    const dude = Card.from_str(str_repr);
+    const dude = Card.FromStr(str_repr);
 
     try expect(dude == Card.CardError.InvalidSuitChar);
 
     str_repr = "SS";
-    const dude2 = Card.from_str(str_repr);
+    const dude2 = Card.FromStr(str_repr);
 
     try expect(dude2 == Card.CardError.InvalidRankChar);
 }
@@ -108,21 +108,21 @@ test "is_left" {
 
     var trump = Suit.Spades;
 
-    var card = try Card.from_str("H9");
+    var card = try Card.FromStr("H9");
     try expect(!card.isLeftBower(trump));
-    card = try Card.from_str("HJ");
+    card = try Card.FromStr("HJ");
     try expect(!card.isLeftBower(trump));
-    card = try Card.from_str("CJ"); // Is left!
+    card = try Card.FromStr("CJ"); // Is left!
     try expect(card.isLeftBower(trump));
-    card = try Card.from_str("SJ");
+    card = try Card.FromStr("SJ");
     try expect(!card.isLeftBower(trump));
     
     trump = Suit.Diamonds;
-    card = try Card.from_str("DJ");
+    card = try Card.FromStr("DJ");
     try expect(!card.isLeftBower(trump));
-    card = try Card.from_str("D9");
+    card = try Card.FromStr("D9");
     try expect(!card.isLeftBower(trump));
-    card = try Card.from_str("HJ");
+    card = try Card.FromStr("HJ");
     try expect(card.isLeftBower(trump));
 
 }
@@ -131,18 +131,18 @@ test "cards_greater_than" {
     const expect = @import("std").testing.expect;
 
     // Test No Trump
-    var card1 = try Card.from_str("S9");
-    var card2 = try Card.from_str("S9");
+    var card1 = try Card.FromStr("S9");
+    var card2 = try Card.FromStr("S9");
 
     try expect(!card1.gt(card2, null).?);
-    card2 = try Card.from_str("ST");
+    card2 = try Card.FromStr("ST");
     try expect(!card1.gt(card2, null).?);
     try expect(card2.gt(card1, null).?);
-    card2 = try Card.from_str("SA");
+    card2 = try Card.FromStr("SA");
     try expect(!card1.gt(card2, null).?);
     try expect(card2.gt(card1, null).?);
 
-    card2 = try Card.from_str("HA");
+    card2 = try Card.FromStr("HA");
     try expect(card1.gt(card2, null) == null);
     try expect(card2.gt(card1, null) == null);
 
@@ -151,28 +151,28 @@ test "cards_greater_than" {
     var trump = Suit.Clubs;
 
     // Tests from above should still pass even if trump is passed in
-    card1 = try Card.from_str("S9");
-    card2 = try Card.from_str("S9");
+    card1 = try Card.FromStr("S9");
+    card2 = try Card.FromStr("S9");
     try expect(!card1.gt(card2, trump).?);
-    card2 = try Card.from_str("ST");
+    card2 = try Card.FromStr("ST");
     try expect(!card1.gt(card2, trump).?);
     try expect(card2.gt(card1, trump).?);
-    card2 = try Card.from_str("SA");
+    card2 = try Card.FromStr("SA");
     try expect(!card1.gt(card2, trump).?);
     try expect(card2.gt(card1, trump).?);
 
     // Test left bower
     trump = Suit.Hearts;
-    card1 = try Card.from_str("DJ");
-    card2 = try Card.from_str("HA");
+    card1 = try Card.FromStr("DJ");
+    card2 = try Card.FromStr("HA");
     try expect(card1.gt(card2, trump).?);
     try expect(!card2.gt(card1, trump).?);
 
-    card2 = try Card.from_str("HJ");
+    card2 = try Card.FromStr("HJ");
     try expect(!card1.gt(card2, trump).?);
     try expect(card2.gt(card1, trump).?);
     
-    card1 = try Card.from_str("CA");
+    card1 = try Card.FromStr("CA");
     try expect(!card1.gt(card2, trump).?);
     try expect(card2.gt(card1, trump).?);
 }

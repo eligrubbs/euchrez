@@ -35,7 +35,7 @@ pub const Rank = enum(u4) {
         };
     }
 
-    pub fn from_char(chr: u8) RankError!Rank {
+    pub fn FromChar(chr: u8) RankError!Rank {
         return switch (chr) {
             '9' => .Nine,
             'T' => .Ten,
