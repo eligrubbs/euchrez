@@ -29,7 +29,7 @@ pub const Card = struct {
 
     /// Returns true if this card is greater than `other`.
     /// false automatically if the cards suits are different and trump is null or does not apply
-    pub fn gt(self: *const Card, other: Card, trump: ?Suit) ?bool {
+    pub fn gt(self: Card, other: Card, trump: ?Suit) ?bool {
         if (trump == null) {
             if (self.suit != other.suit) return null;
             return self.rank.gt(other.rank);
@@ -57,17 +57,17 @@ pub const Card = struct {
     }
 
     /// Given a trump suit, return true if this card is the left bower.
-    pub fn isLeftBower(self: *const Card, trump: Suit) bool {
+    pub fn isLeftBower(self: Card, trump: Suit) bool {
         return (self.rank == Rank.Jack) and self.suit == trump.LeftBowerSuit();
     }
 
     /// Given a trump suit, return true if this card is the right bower
-    pub fn isRightBower(self: *const Card, trump: Suit) bool {
+    pub fn isRightBower(self: Card, trump: Suit) bool {
         return (self.rank == Rank.Jack) and self.suit == trump;
     }
 
     /// Given a trump suit, returns whether `self` is trump or not.
-    pub fn isTrump(self: *const Card, trump: Suit) bool {
+    pub fn isTrump(self: Card, trump: Suit) bool {
         return self.suit == trump or self.isLeftBower(trump);
     }
 
