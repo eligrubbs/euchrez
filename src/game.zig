@@ -512,6 +512,26 @@ pub const Game = struct {
 };
 
 
+pub const ScopedState = struct {
+    dealer_actor: PlayerId,
+    current_actor: PlayerId,
+    hand: [6:null]?Card,
+
+    calling_actor: ?PlayerId,
+    flipped_choice: ?FlippedChoice,
+    flipped_card: Card,
+
+    trump: ?Suit,
+
+    led_suit: ?Suit,
+
+    order: [4]PlayerId,
+    center: [4:null]?Card,
+
+    // TODO: include previous actions and who took them
+
+    legal_actions: [6:null]?Action,
+};
 
 
 test "create_game" {
