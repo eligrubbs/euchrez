@@ -12,6 +12,9 @@ const Player = @import("player.zig").Player;
 const PlayerId: type = @import("player.zig").PlayerId;
 const FlippedChoice = @import("action.zig").FlippedChoice;
 
+
+pub const Turn: type = struct{PlayerId,Action};
+
 pub const Game = struct {
     const num_players = 4; // do not change
     const empty_center: [4:null]?Card = .{null} ** 4;
@@ -38,7 +41,7 @@ pub const Game = struct {
     center: [4:null]?Card, // 4 is maximum number of cards that can be in the middle
     trump: ?Suit,
 
-    actions_taken: [29:null]?Action, // maximum number of actions there can be in a euchre game.
+    turns_taken: [29:null]?Turn, // maximum number of actions there can be in a euchre game.
 
     const GameError = error {
         ActionNotLegalGivenGameState,
@@ -89,7 +92,7 @@ pub const Game = struct {
             .center = empty_center,
             .trump = null,
 
-            .actions_taken = .{null} ** 29,
+            .turns_taken = .{null} ** 29,
         };
 
     }
@@ -137,7 +140,7 @@ pub const Game = struct {
         self.center = empty_center;
         self.trump = null;
 
-        self.actions_taken = .{null} ** 29;
+        self.turns_taken = .{null} ** 29;
     }
 
     /// Returns the order of the rest of the players if `p_id` is assumed to go first.
@@ -158,11 +161,11 @@ pub const Game = struct {
     }
 
     /// Returns the number of actions taken
-    fn num_actions_taken(self: *const Game) usize {
-        inline for (self.actions_taken, 0..) |act, count| {
+    fn num_turns_taken(self: *const Game) usize {
+        inline for (self.turns_taken, 0..) |act, count| {
             if (act == null) return count;
         }
-        return self.actions_taken.len;
+        return self.turns_taken.len;
     }
 
     /// Returns the number of cards in the center
@@ -174,16 +177,16 @@ pub const Game = struct {
     }
 
     /// Returns the most recent action taken or null if no actions have been taken
-    fn last_action(self: *const Game) ?Action {
-        const acts_taken = self.num_actions_taken();
+    fn last_action(self: *const Game) ?Turn {
+        const acts_taken = self.num_turns_taken();
         if (acts_taken == 0) return null;
-        return self.actions_taken[acts_taken-1];
+        return self.turns_taken[acts_taken-1];
     }
 
     fn ind_of_action_taken(self: *const Game, action: Action) GameError!usize {
-        inline for (self.actions_taken, 0..) |act, ind| {
+        inline for (self.turns_taken, 0..) |act, ind| {
             if (act == null) return GameError.ActionNotPreviouslyTaken;
-            if (act != null and act.? == action) {
+            if (act != null and act.?[1] == action) {
                 return ind;
             }
         }
@@ -195,8 +198,9 @@ pub const Game = struct {
     // /////
 
     /// Take `action` and change the game state to reflect that.
-    pub fn step(self: *Game, action: Action) GameError!PlayerId {
+    pub fn step(self: *Game, action: Action) GameError!struct {PlayerId, ScopedState} {
         const legal_acts = self.get_legal_actions();
+        const old_player = self.curr_player_id;
         var legal = false;
         for (legal_acts) |act| {
             if (act != null and act.? == action) {
@@ -222,16 +226,18 @@ pub const Game = struct {
         }
 
         // Record that I have taken this action
-        self.actions_taken[self.num_actions_taken()] = action;
+        self.turns_taken[self.num_turns_taken()] = .{old_player, action};
 
-        return self.curr_player_id;
+        return .{self.curr_player_id, self.get_scoped_state()};
     }
 
     /// Remove the affects of the last action taken in the game.
-    pub fn step_back(self: *Game) GameError!PlayerId {
-        const the_last_action = self.last_action();
-        if (the_last_action == null) return GameError.GameHasNotStarted;
-        self.actions_taken[self.num_actions_taken()-1] = null;
+    pub fn step_back(self: *Game) GameError!struct {PlayerId, ScopedState} {
+        const the_last_turn = self.last_action();
+        if (the_last_turn == null) return GameError.GameHasNotStarted;
+
+        const the_last_action = the_last_turn[1];
+        self.turns_taken[self.num_turns_taken()-1] = null;
 
         switch (the_last_action.?) {
             .Pick => self.undo_pick_action(),
@@ -241,7 +247,7 @@ pub const Game = struct {
             Action.Discard => self.undo_discard_action(the_last_action),
         }
 
-        return self.curr_player_id;
+        return .{self.curr_player_id, self.get_scoped_state()};
     }
 
     /// Returns an array of size 6 containing all possible actions a player can take.  
@@ -294,6 +300,30 @@ pub const Game = struct {
         }
 
         return result;
+    }
+
+    pub fn get_scoped_state(self: *const Game) ScopedState {
+        const scoped_state = ScopedState{
+            .dealer_actor = self.dealer_id,
+            .current_actor = self.curr_player_id,
+            .hand = self.players[self.curr_player_id].hand,
+
+            .calling_actor = self.caller_id,
+            .flipped_choice = self.flipped_choice,
+            .flipped_card = self.flipped_card,
+
+            .trump = self.trump,
+
+            .led_suit = self.get_led_suit(),
+
+            .order = self.order,
+            .center = self.center,
+
+            .turns_taken = self.turns_taken,
+
+            .legal_actions= self.get_legal_actions(),
+        };
+        return scoped_state;
     }
 
     /// Changes to game state:
@@ -408,7 +438,7 @@ pub const Game = struct {
             const act_ind = try self.ind_of_action_taken(action);
     
             inline for (1..4) |offset| {
-                const act_card = try self.actions_taken[act_ind-offset].?.toCard();
+                const act_card = try self.turns_taken[act_ind-offset].?[1].toCard();
                 self.center[3-offset] = act_card;
             }
         } else {
@@ -528,7 +558,7 @@ pub const ScopedState = struct {
     order: [4]PlayerId,
     center: [4:null]?Card,
 
-    // TODO: include previous actions and who took them
+    turns_taken: [29:null]?Turn,
 
     legal_actions: [6:null]?Action,
 };
