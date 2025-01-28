@@ -1,8 +1,10 @@
 
 const Card = @import("card/card.zig").Card;
 
+pub const PlayerId: type = u2;
+
 pub const Player = struct {
-    id: u2,
+    id: PlayerId,
     tricks: u3,
     hand: [6:null]?Card,
 
@@ -16,7 +18,7 @@ pub const Player = struct {
 
     /// Creates an empty player object
     /// A player is always initialized with 5 cards
-    pub fn init(p_id: u2, hand: []const Card) PlayerError!Player {
+    pub fn init(p_id: PlayerId, hand: []const Card) PlayerError!Player {
         var p_hand: [6:null]?Card = undefined;
 
         if (hand.len != 5) return PlayerError.InitialHandNot5Cards;
@@ -72,7 +74,7 @@ pub const Player = struct {
         if (!found) return PlayerError.CardNotPresent;
     }
 
-    pub fn get_id(self: *const Player) u2 {
+    pub fn get_id(self: *const Player) PlayerId {
         return self.id;
     }
 

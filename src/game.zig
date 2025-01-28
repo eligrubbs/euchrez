@@ -9,6 +9,7 @@ const Rank = @import("card/rank.zig").Rank;
 const Deck = @import("deck.zig").Deck;
 const Action = @import("action.zig").Action;
 const Player = @import("player.zig").Player;
+const PlayerId: type = @import("player.zig").PlayerId;
 const FlippedChoice = @import("action.zig").FlippedChoice;
 
 pub const Game = struct {
@@ -25,15 +26,15 @@ pub const Game = struct {
     deck: Deck,
 
     players: [4]Player,
-    dealer_id: u2,
-    curr_player_id: u2,
-    caller_id: ?u2,
+    dealer_id: PlayerId,
+    curr_player_id: PlayerId,
+    caller_id: ?PlayerId,
 
     flipped_card: Card,
     flipped_choice: ?FlippedChoice,
 
-    order: [4]u2,
-    previous_last_in_order_id: ?u2, // used only for undoing play actions
+    order: [4]PlayerId,
+    previous_last_in_order_id: ?PlayerId, // used only for undoing play actions
     center: [4:null]?Card, // 4 is maximum number of cards that can be in the middle
     trump: ?Suit,
 
@@ -124,7 +125,7 @@ pub const Game = struct {
         self.players[2] = try Player.init(2, try self.deck.deal_five_cards());
         self.players[3] = try Player.init(3, try self.deck.deal_five_cards());
 
-        self.dealer_id = self.prng.random().int(u2);
+        self.dealer_id = self.prng.random().int(PlayerId);
         self.curr_player_id = self.dealer_id +% 1;
         self.caller_id = null;
 
@@ -140,7 +141,7 @@ pub const Game = struct {
     }
 
     /// Returns the order of the rest of the players if `p_id` is assumed to go first.
-    fn order_starting_from(p_id: u2) [4]u2 {
+    fn order_starting_from(p_id: PlayerId) [4]PlayerId {
         return .{p_id, p_id +% 1, p_id +% 2, p_id +% 3};
     }
 
@@ -194,7 +195,7 @@ pub const Game = struct {
     // /////
 
     /// Take `action` and change the game state to reflect that.
-    pub fn step(self: *Game, action: Action) GameError!u2 {
+    pub fn step(self: *Game, action: Action) GameError!PlayerId {
         const legal_acts = self.get_legal_actions();
         var legal = false;
         for (legal_acts) |act| {
@@ -227,7 +228,7 @@ pub const Game = struct {
     }
 
     /// Remove the affects of the last action taken in the game.
-    pub fn step_back(self: *Game) GameError!u2 {
+    pub fn step_back(self: *Game) GameError!PlayerId {
         const the_last_action = self.last_action();
         if (the_last_action == null) return GameError.GameHasNotStarted;
         self.actions_taken[self.num_actions_taken()-1] = null;
@@ -469,8 +470,8 @@ pub const Game = struct {
     /// 
     /// Assumes the game is in a state where center has 4 cards.  
     /// Leverages that indices of cards in center match the id of who played them in `self.order`
-    fn judge_trick(self: *Game) u2 {
-        var best_player: u2 = self.order[0];
+    fn judge_trick(self: *Game) PlayerId {
+        var best_player: PlayerId = self.order[0];
         var best_card: Card = self.center[0].?;
 
         for (1..4) |ind| {
