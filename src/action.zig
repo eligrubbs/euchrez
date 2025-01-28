@@ -36,23 +36,23 @@ pub const Action = enum(u6) {
         NotConvertableToCard,
     };
 
-    pub fn toInt(self: Action) u6 {
+    pub fn ToInt(self: Action) u6 {
         return @intFromEnum(self);
     }
 
-    pub fn fromInt(integer: u6) ActionError!Action {
+    pub fn FromInt(integer: u6) ActionError!Action {
         if (integer >= total_actions) return ActionError.IntOutOfRange;
         return @enumFromInt(integer);
     }
 
-    pub fn fromStr(str: []const u8) ActionError!Action {
+    pub fn FromStr(str: []const u8) ActionError!Action {
         if (std.meta.stringToEnum(Action, str)) |dude| {
             return dude;
         }
         return ActionError.StrNotConvertable;
     }
 
-    pub fn fromCard(card: Card, to_play: bool ) Action {
+    pub fn FromCard(card: Card, to_play: bool ) Action {
         const suit_num: u6 = @as(u6, @intFromEnum(card.suit)) + 1;
         const rank_num: u6 = @intFromEnum(card.rank) - 9;
         const discard_offset: u6 = if (to_play == true) 0 else 24;
@@ -60,7 +60,7 @@ pub const Action = enum(u6) {
         return @enumFromInt(num);
     }
 
-    pub fn toCard(self: Action) ActionError!Card {
+    pub fn ToCard(self: Action) ActionError!Card {
         const num: u6 = @intFromEnum(self);
         if (num < 6) return ActionError.NotConvertableToCard;
         const rank_num = (num % 6) + 9;
@@ -86,30 +86,30 @@ test "action_from_str" {
 
     const act_str = "Pick";
 
-    const act = try Action.fromStr(act_str[0..]);
+    const act = try Action.FromStr(act_str[0..]);
 
     try expect(act == Action.Pick);
 
-    try expectErr(Action.ActionError.StrNotConvertable, Action.fromStr("playS9"));
+    try expectErr(Action.ActionError.StrNotConvertable, Action.FromStr("playS9"));
 }
 
 test "action_from_card" {
     const expect = std.testing.expect;
 
-    var card = try Card.from_str("S9");
+    var card = try Card.FromStr("S9");
 
-    var act = Action.fromCard(card, true);
+    var act = Action.FromCard(card, true);
     try expect(act == Action.PlayS9);
 
-    var act_d = Action.fromCard(card, false);
+    var act_d = Action.FromCard(card, false);
     try expect(act_d == Action.DiscardS9);
 
-    card = try Card.from_str("CA");
+    card = try Card.FromStr("CA");
 
-    act = Action.fromCard(card, true);
+    act = Action.FromCard(card, true);
     try expect(act == Action.PlayCA);
 
-    act_d = Action.fromCard(card, false);
+    act_d = Action.FromCard(card, false);
     try expect(act_d == Action.DiscardCA);
 }
 
@@ -117,6 +117,6 @@ test "card_from_action" {
     const expect = std.testing.expect;
 
     var act = Action.PlayC9;
-    const card = try act.toCard();
-    try expect(card.eq(try Card.from_str("C9")));
+    const card = try act.ToCard();
+    try expect(card.eq(try Card.FromStr("C9")));
 }

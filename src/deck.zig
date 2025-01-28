@@ -25,12 +25,12 @@ pub const Deck = struct {
             .deal_index = 0,
         };
 
-        Deck.fill_unshuffled(&deck.card_buffer);
+        Deck.fillUnshuffled(&deck.card_buffer);
 
         return deck;
     }
 
-    pub fn fill_unshuffled(deck_buff: *[deck_size]Card) void {
+    pub fn fillUnshuffled(deck_buff: *[deck_size]Card) void {
         var card_ind: usize = 0;
         inline for (Suit.range) |suit| {
             inline for (Rank.range) |rank| {
@@ -46,7 +46,7 @@ pub const Deck = struct {
     /// The cards are NOT removed from the deck's memory buffer.
     ///
     /// Will throw an error there are not 5 cards to deal.
-    pub fn deal_five_cards(self: *Deck) DeckError![]const Card {
+    pub fn DealFiveCards(self: *Deck) DeckError![]const Card {
         if (self.deal_index >= (deck_size - 4)) return DeckError.NotEnoughCards;
 
         self.deal_index += 5;
@@ -55,7 +55,7 @@ pub const Deck = struct {
 
     /// Return a copy of the next undealt card.
     /// Does not deal the card.
-    pub fn peek_at_top_card(self: *Deck) DeckError!Card {
+    pub fn PeekAtTopCard(self: *Deck) DeckError!Card {
         if (self.deal_index >= deck_size) return DeckError.NotEnoughCards;
         return self.card_buffer[self.deal_index];
     }
@@ -65,7 +65,7 @@ pub const Deck = struct {
     ///
     /// The card is NOT removed from the deck's memory buffer.
     ///
-    pub fn deal_one_card(self: *Deck) DeckError!Card {
+    pub fn DealOneCard(self: *Deck) DeckError!Card {
         if (self.deal_index >= deck_size) return DeckError.NotEnoughCards;
         self.deal_index += 1;
         return self.card_buffer[self.deal_index - 1];
@@ -90,31 +90,31 @@ test "deal euchre deck" {
 
     var deck = try Deck.new();
 
-    const hand1 = try deck.deal_five_cards();
-    const expected_hand1 = [5]Card{ try Card.from_str("S9"), try Card.from_str("ST"), try Card.from_str("SJ"), try Card.from_str("SQ"), try Card.from_str("SK") };
+    const hand1 = try deck.DealFiveCards();
+    const expected_hand1 = [5]Card{ try Card.FromStr("S9"), try Card.FromStr("ST"), try Card.FromStr("SJ"), try Card.FromStr("SQ"), try Card.FromStr("SK") };
     for (expected_hand1, 0..) |card, ind| {
         try expect(card.eq(hand1[ind]));
     }
 
-    const hand2 = try deck.deal_five_cards();
-    const expected_hand2 = [5]Card{ try Card.from_str("SA"), try Card.from_str("H9"), try Card.from_str("HT"), try Card.from_str("HJ"), try Card.from_str("HQ") };
+    const hand2 = try deck.DealFiveCards();
+    const expected_hand2 = [5]Card{ try Card.FromStr("SA"), try Card.FromStr("H9"), try Card.FromStr("HT"), try Card.FromStr("HJ"), try Card.FromStr("HQ") };
     for (expected_hand2, 0..) |card, ind| {
         try expect(card.eq(hand2[ind]));
     }
 
-    const hand3 = try deck.deal_five_cards();
-    const expected_hand3 = [5]Card{ try Card.from_str("HK"), try Card.from_str("HA"), try Card.from_str("D9"), try Card.from_str("DT"), try Card.from_str("DJ") };
+    const hand3 = try deck.DealFiveCards();
+    const expected_hand3 = [5]Card{ try Card.FromStr("HK"), try Card.FromStr("HA"), try Card.FromStr("D9"), try Card.FromStr("DT"), try Card.FromStr("DJ") };
     for (expected_hand3, 0..) |card, ind| {
         try expect(card.eq(hand3[ind]));
     }
 
-    const hand4 = try deck.deal_five_cards();
-    const expected_hand4 = [5]Card{ try Card.from_str("DQ"), try Card.from_str("DK"), try Card.from_str("DA"), try Card.from_str("C9"), try Card.from_str("CT") };
+    const hand4 = try deck.DealFiveCards();
+    const expected_hand4 = [5]Card{ try Card.FromStr("DQ"), try Card.FromStr("DK"), try Card.FromStr("DA"), try Card.FromStr("C9"), try Card.FromStr("CT") };
     for (expected_hand4, 0..) |card, ind| {
         try expect(card.eq(hand4[ind]));
     }
 
     // cant deal any more cards
     try expect(deck.deal_index == 20);
-    try expectErr(Deck.DeckError.NotEnoughCards, deck.deal_five_cards());
+    try expectErr(Deck.DeckError.NotEnoughCards, deck.DealFiveCards());
 }

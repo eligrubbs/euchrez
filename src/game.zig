@@ -120,19 +120,19 @@ pub const Game = struct {
         self.is_over = false;
         self.scores = null;
 
-        Deck.fill_unshuffled(&self.deck.card_buffer);
+        Deck.fillUnshuffled(&self.deck.card_buffer);
         self.prng.random().shuffle(Card, &self.deck.card_buffer);
 
-        self.players[0] = try Player.init(0, try self.deck.deal_five_cards());
-        self.players[1] = try Player.init(1, try self.deck.deal_five_cards());
-        self.players[2] = try Player.init(2, try self.deck.deal_five_cards());
-        self.players[3] = try Player.init(3, try self.deck.deal_five_cards());
+        self.players[0] = try Player.init(0, try self.deck.DealFiveCards());
+        self.players[1] = try Player.init(1, try self.deck.DealFiveCards());
+        self.players[2] = try Player.init(2, try self.deck.DealFiveCards());
+        self.players[3] = try Player.init(3, try self.deck.DealFiveCards());
 
         self.dealer_id = self.prng.random().int(PlayerId);
         self.curr_player_id = self.dealer_id +% 1;
         self.caller_id = null;
 
-        self.flipped_card = try self.deck.deal_one_card();
+        self.flipped_card = try self.deck.DealOneCard();
         self.flipped_choice = null;
 
         self.order = Game.order_starting_from(self.curr_player_id);
@@ -283,7 +283,7 @@ pub const Game = struct {
                 const is_left: bool = curr_card.isLeftBower(self.trump.?);
                 const is_led_suit: bool = curr_card.suit.eq(led_suit);
                 if ((!is_left and is_led_suit) or (is_left and self.trump == led_suit)) {
-                    result[num_led_suit_in_hand] = Action.fromCard(curr_card, true);
+                    result[num_led_suit_in_hand] = Action.FromCard(curr_card, true);
                     num_led_suit_in_hand += 1;
                 }
             }
@@ -296,7 +296,7 @@ pub const Game = struct {
         // Either way I will go through my whole hand.
         for (0..6) |ind| {
             const curr_card = active_player.hand[ind];
-            result[ind] = if (curr_card == null) null else Action.fromCard(curr_card.?, play_hand);
+            result[ind] = if (curr_card == null) null else Action.FromCard(curr_card.?, play_hand);
         }
 
         return result;
@@ -412,7 +412,7 @@ pub const Game = struct {
     /// 3. sets current player to player left of current (player_id is one higher, wrapped)
     ///     - If this player plays the 4th (last) card of the trick, another method will overwrite this
     fn perform_play_action(self: *Game, action: Action) !void {
-        const card = try action.toCard();
+        const card = try action.ToCard();
         try self.players[self.curr_player_id].discard_card(card);
 
         const open_center_ind = self.num_cards_in_center();
@@ -438,7 +438,7 @@ pub const Game = struct {
             const act_ind = try self.ind_of_action_taken(action);
     
             inline for (1..4) |offset| {
-                const act_card = try self.turns_taken[act_ind-offset].?[1].toCard();
+                const act_card = try self.turns_taken[act_ind-offset].?[1].ToCard();
                 self.center[3-offset] = act_card;
             }
         } else {
@@ -446,7 +446,7 @@ pub const Game = struct {
             self.center[self.num_cards_in_center()-1] = null;
         }
 
-        const card = try action.toCard();
+        const card = try action.ToCard();
         try self.players[self.curr_player_id].put_card_back_in_hand(card);
     }
 
@@ -455,7 +455,7 @@ pub const Game = struct {
     /// 1. sets current player to player left of dealer
     /// 2. remove specified card from dealers hand
     fn perform_discard_action(self: *Game, action: Action) !void {
-        const card = try action.toCard();
+        const card = try action.ToCard();
         try self.players[self.dealer_id].discard_card(card);
         self.curr_player_id = self.dealer_id +% 1;
     }
@@ -464,7 +464,7 @@ pub const Game = struct {
     /// 1. sets current player to dealer
     /// 2. adds discarded card to dealers hand
     fn undo_discard_action(self: *Game, action: Action) void {
-        const card = try action.toCard();
+        const card = try action.ToCard();
         self.curr_player_id = self.dealer_id;
         const deck_card = card;
         self.players[self.dealer_id].pick_up_6th_card(deck_card);

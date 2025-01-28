@@ -28,7 +28,7 @@ pub const Suit = enum(u2) {
         };
     }
 
-    pub fn from_char(chr: u8) SuitError!Suit {
+    pub fn FromChar(chr: u8) SuitError!Suit {
         return switch (chr) {
             'S' => .Spades,
             'C' => .Clubs,
