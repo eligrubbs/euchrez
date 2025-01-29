@@ -232,19 +232,24 @@ pub const Game = struct {
 
     /// Remove the affects of the last action taken in the game.
     pub fn step_back(self: *Game) GameError!struct {PlayerId, ScopedState} {
+        if (self.is_over) self.is_over = false;
+
         const the_last_turn = self.last_action();
         if (the_last_turn == null) return GameError.GameHasNotStarted;
 
-        const the_last_action = the_last_turn[1];
-        self.turns_taken[self.num_turns_taken()-1] = null;
+        const the_last_action = the_last_turn.?[1];
 
-        switch (the_last_action.?) {
-            .Pick => self.undo_pick_action(),
-            .Pass => self.undo_pass_action(),
-            Action.Call => self.undo_call_action(),
-            Action.Play => self.undo_play_action(the_last_action),
-            Action.Discard => self.undo_discard_action(the_last_action),
+        switch (@intFromEnum(the_last_action)) {
+            @intFromEnum(Action.Pick) => try self.undo_pick_action(),
+            @intFromEnum(Action.Pass) => self.undo_pass_action(),
+            @intFromEnum(Action.CallSpades)...@intFromEnum(Action.CallClubs) => self.undo_call_action(),
+            @intFromEnum(Action.PlayS9)...@intFromEnum(Action.PlayCA) => try self.undo_play_action(the_last_action),
+            @intFromEnum(Action.DiscardS9)...@intFromEnum(Action.DiscardCA) => try self.undo_discard_action(the_last_action),
+            else => unreachable,
         }
+
+        // remove the action
+        self.turns_taken[self.num_turns_taken()-1] = null;
 
         return .{self.curr_player_id, self.get_scoped_state()};
     }
@@ -347,7 +352,7 @@ pub const Game = struct {
     /// 3. `caller_id` is set to null
     /// 4. flipped choice is set to null
     /// 5. Trump is set to none
-    fn undo_pick_action(self: *Game) void {
+    fn undo_pick_action(self: *Game) Player.PlayerError!void {
         try self.players[self.dealer_id].discard_card(self.flipped_card);
         self.curr_player_id = self.caller_id.?;
         self.caller_id = null;
@@ -400,7 +405,7 @@ pub const Game = struct {
     /// 3. sets caller id to null
     fn undo_call_action(self: *Game) void {
         self.trump = null;
-        self.curr_player_id = self.caller_id;
+        self.curr_player_id = self.caller_id.?;
         self.caller_id = null;
     }
 
@@ -430,11 +435,11 @@ pub const Game = struct {
     ///         - reset curr_player_id to be one less than current (wrapped)
     ///         - set latest card in center to null
     /// 2. puts the card played back in curr players hand
-    fn undo_play_action(self: *Game, action: Action) Player.PlayerError!void {
+    fn undo_play_action(self: *Game, action: Action) (Player.PlayerError || Action.ActionError)!void {
         if (self.num_cards_in_center() == 0) {
             try self.players[self.curr_player_id].take_away_trick();
             self.curr_player_id = self.previous_last_in_order_id.?;
-            const act_ind = try self.ind_of_action_taken(action);
+            const act_ind = self.ind_of_action_taken(action);
     
             inline for (1..4) |offset| {
                 const act_card = try self.turns_taken[act_ind-offset].?[1].ToCard();
@@ -462,7 +467,7 @@ pub const Game = struct {
     /// undos this discard action. Assumes it is only called from a valid state
     /// 1. sets current player to dealer
     /// 2. adds discarded card to dealers hand
-    fn undo_discard_action(self: *Game, action: Action) void {
+    fn undo_discard_action(self: *Game, action: Action) Action.ActionError!void {
         const card = try action.ToCard();
         self.curr_player_id = self.dealer_id;
         const deck_card = card;
@@ -581,20 +586,42 @@ test "create_game" {
 }
 
 
-test "play 10,000 games" {
+test "play 10,000 games randomly" {
     const expect = std.testing.expect;
 
     // Instead of testing the code verbosely for runtime errors, I will run 10,000 games
     const num_games = 10_000;
+
+    var prng = std.Random.DefaultPrng.init(blk: {
+                var seed: u64 = undefined;
+                try std.posix.getrandom(std.mem.asBytes(&seed));
+                break :blk seed;
+    });
 
     for (0..num_games) |_| {
         var game = try Game.new(.{ .verbose = false});
         try game.reset();
         for (0..29) |_| {
             if (game.is_over == true) break;
+
             const acts = game.get_legal_actions();
-            _ = try game.step(acts[0].?);
+            var num_act: usize = 6;
+            num_acts: for (acts, 0..) |act, count| {
+                if (act == null) {
+                    num_act = count;
+                    break :num_acts;
+                }
+            }
+            const act = acts[prng.random().intRangeAtMost(usize, 1, num_act)-1];
+        
+            _ = try game.step(act.?);
         }
         try expect(game.is_over == true);
+
+        // step back through the whole game
+        while (true) {
+           const turn = game.step_back() catch break;
+           _ = turn;
+        }
     }
 }
