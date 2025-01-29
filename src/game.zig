@@ -12,7 +12,6 @@ const Player = @import("player.zig").Player;
 const PlayerId: type = @import("player.zig").PlayerId;
 const FlippedChoice = @import("action.zig").FlippedChoice;
 
-
 pub const Turn: type = struct{PlayerId,Action};
 
 pub const Game = struct {
@@ -48,6 +47,7 @@ pub const Game = struct {
         NotPlayable,
         TrumpNotSet,
         GameHasNotStarted,
+        GameIsOver,
         KittyCardNotAvailable,
         DealerMustCallAfterTurnedDownKittyCard,
         TrumpAlreadySet,
@@ -197,7 +197,11 @@ pub const Game = struct {
     // /////
 
     /// Take `action` and change the game state to reflect that.
+    /// 
+    /// Will return errors if the action is not allowed in this state, or the game is over.
     pub fn step(self: *Game, action: Action) GameError!struct {PlayerId, ScopedState} {
+        if (self.is_over) return GameError.GameIsOver;
+
         const legal_acts = self.get_legal_actions();
         const old_player = self.curr_player_id;
         var legal = false;
@@ -258,6 +262,8 @@ pub const Game = struct {
     /// The array is 6 long because at most a player can have 6 choices at once, never more.
     pub fn get_legal_actions(self: *const Game) [6:null]?Action {
         var result: [6:null]?Action = .{null} ** 6;
+        if (self.is_over) return result;
+
         const active_player = &self.players[self.curr_player_id];
 
         var play_hand: bool = true;
