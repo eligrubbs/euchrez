@@ -55,7 +55,11 @@ pub const Game = struct {
     } || Player.PlayerError || Card.CardError || Action.ActionError;
 
     pub const GameConfig = struct {
+        /// Determines whether to print out to stdout the events of the game
         verbose: bool = false,
+        /// Specify the dealer or `null` for a random dealer every `reset` unless `seed` is set.
+        dealer_id: ?PlayerId = null,
+        /// Specify the seed for consistent `reset` results or `null` for random `reset` every time.
         seed: ?u64 = null,
     };
 
@@ -99,13 +103,7 @@ pub const Game = struct {
 
     /// Resets the game state to a valid beginning state.
     /// 
-    /// Right now this is what it does:
-    /// 1. Sets was initialized to true
-    /// 2. Sets is_over to false
-    /// 3. resets deck to unshuffled version
-    /// 4. Creates 4 players and deals them 5 cards each
-    /// 5. Sets dealer id to 0, curr player to 1, and calling_player to null
-    /// 6. initializes flipped card and sets flipped choice to null
+    /// Reuses the config passed in when `new` was called.
     pub fn reset(self: *Game) !void {
         self.prng = std.Random.DefaultPrng.init(blk: {
                 var seed: u64 = undefined;
@@ -128,7 +126,7 @@ pub const Game = struct {
         self.players[2] = try Player.init(2, try self.deck.DealFiveCards());
         self.players[3] = try Player.init(3, try self.deck.DealFiveCards());
 
-        self.dealer_id = self.prng.random().int(PlayerId);
+        self.dealer_id = if (self.config.dealer_id != null) self.config.dealer_id.? else self.prng.random().int(PlayerId);
         self.curr_player_id = self.dealer_id +% 1;
         self.caller_id = null;
 
@@ -183,14 +181,15 @@ pub const Game = struct {
         return self.turns_taken[acts_taken-1];
     }
 
-    fn ind_of_action_taken(self: *const Game, action: Action) GameError!usize {
+    /// Assumes that `action` was a previously taken action.
+    /// Only used internally so don't worry about errors
+    fn ind_of_action_taken(self: *const Game, action: Action) usize {
         inline for (self.turns_taken, 0..) |act, ind| {
-            if (act == null) return GameError.ActionNotPreviouslyTaken;
             if (act != null and act.?[1] == action) {
                 return ind;
             }
         }
-        return GameError.ActionNotPreviouslyTaken;
+        unreachable;
     }
 
     // //////
