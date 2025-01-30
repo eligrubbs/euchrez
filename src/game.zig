@@ -11,12 +11,16 @@ const Action = @import("action.zig").Action;
 const Player = @import("player.zig").Player;
 const PlayerId: type = @import("player.zig").PlayerId;
 const FlippedChoice = @import("action.zig").FlippedChoice;
+const NullSentinelArray = @import("nullarray.zig").NullSentinelArray;
 
 pub const Turn: type = struct{PlayerId,Action};
+pub const TurnsTaken: type = NullSentinelArray(Turn, 29);
+pub const LegalActions: type = NullSentinelArray(Action, 6);
+pub const CenterCards: type = NullSentinelArray(Card, 4);
 
 pub const Game = struct {
     const num_players = 4; // do not change
-    const empty_center: [4:null]?Card = .{null} ** 4;
+    const empty_center: CenterCards = CenterCards.new();
 
     config: GameConfig,
     prng: std.Random.DefaultPrng,
@@ -37,10 +41,10 @@ pub const Game = struct {
 
     order: [4]PlayerId,
     previous_last_in_order_id: ?PlayerId, // used only for undoing play actions
-    center: [4:null]?Card, // 4 is maximum number of cards that can be in the middle
+    center: CenterCards, // 4 is maximum number of cards that can be in the middle
     trump: ?Suit,
 
-    turns_taken: [29:null]?Turn, // maximum number of actions there can be in a euchre game.
+    turns_taken: TurnsTaken, // maximum number of actions there can be in a euchre game.
 
     const GameError = error {
         ActionNotLegalGivenGameState,
@@ -52,7 +56,7 @@ pub const Game = struct {
         DealerMustCallAfterTurnedDownKittyCard,
         TrumpAlreadySet,
         ActionNotPreviouslyTaken,
-    } || Player.PlayerError || Card.CardError || Action.ActionError;
+    } || Player.PlayerError || Card.CardError || Action.ActionError || CenterCards.ArrayError;
 
     pub const GameConfig = struct {
         /// Determines whether to print out to stdout the events of the game
@@ -81,7 +85,7 @@ pub const Game = struct {
             .is_over = false,
             .scores = null,
 
-            .deck = try Deck.new(),
+            .deck = Deck.new(),
 
             .players = undefined,
             .dealer_id = undefined,
@@ -96,7 +100,7 @@ pub const Game = struct {
             .center = empty_center,
             .trump = null,
 
-            .turns_taken = .{null} ** 29,
+            .turns_taken = TurnsTaken.new(),
         };
 
     }
@@ -121,10 +125,10 @@ pub const Game = struct {
         Deck.fillUnshuffled(&self.deck.card_buffer);
         self.prng.random().shuffle(Card, &self.deck.card_buffer);
 
-        self.players[0] = try Player.init(0, try self.deck.DealFiveCards());
-        self.players[1] = try Player.init(1, try self.deck.DealFiveCards());
-        self.players[2] = try Player.init(2, try self.deck.DealFiveCards());
-        self.players[3] = try Player.init(3, try self.deck.DealFiveCards());
+        self.players[0] = try Player.new(0, try self.deck.DealFiveCards());
+        self.players[1] = try Player.new(1, try self.deck.DealFiveCards());
+        self.players[2] = try Player.new(2, try self.deck.DealFiveCards());
+        self.players[3] = try Player.new(3, try self.deck.DealFiveCards());
 
         self.dealer_id = if (self.config.dealer_id != null) self.config.dealer_id.? else self.prng.random().int(PlayerId);
         self.curr_player_id = self.dealer_id +% 1;
@@ -138,7 +142,7 @@ pub const Game = struct {
         self.center = empty_center;
         self.trump = null;
 
-        self.turns_taken = .{null} ** 29;
+        self.turns_taken = TurnsTaken.new();
     }
 
     /// Returns the order of the rest of the players if `p_id` is assumed to go first.
@@ -149,9 +153,9 @@ pub const Game = struct {
     /// Returns the effective suit of the game
     /// If there is no effective suit, return null
     fn get_led_suit(self: *const Game) ?Suit {
-        if (self.center[0] == null or self.trump == null) return null;
+        if (self.center.get(0) == null or self.trump == null) return null;
 
-        const led_card = self.center[0].?;
+        const led_card = self.center.get(0).?;
         if (led_card.isLeftBower(self.trump.?)) {
                 return self.trump;
         }
@@ -160,31 +164,25 @@ pub const Game = struct {
 
     /// Returns the number of actions taken
     fn num_turns_taken(self: *const Game) usize {
-        inline for (self.turns_taken, 0..) |act, count| {
-            if (act == null) return count;
-        }
-        return self.turns_taken.len;
+        return self.turns_taken.num_left();
     }
 
     /// Returns the number of cards in the center
     fn num_cards_in_center(self: *const Game) usize {
-        inline for (self.center, 0..) |card, count| {
-            if (card == null) return count;
-        }
-        return self.center.len;
+        return self.center.num_left();
     }
 
     /// Returns the most recent action taken or null if no actions have been taken
     fn last_action(self: *const Game) ?Turn {
         const acts_taken = self.num_turns_taken();
         if (acts_taken == 0) return null;
-        return self.turns_taken[acts_taken-1];
+        return self.turns_taken.get(acts_taken-1);
     }
 
     /// Assumes that `action` was a previously taken action.
     /// Only used internally so don't worry about errors
     fn ind_of_action_taken(self: *const Game, action: Action) usize {
-        inline for (self.turns_taken, 0..) |act, ind| {
+        inline for (self.turns_taken.data, 0..) |act, ind| {
             if (act != null and act.?[1] == action) {
                 return ind;
             }
@@ -204,32 +202,21 @@ pub const Game = struct {
 
         const legal_acts = self.get_legal_actions();
         const old_player = self.curr_player_id;
-        var legal = false;
-        for (legal_acts) |act| {
-            if (act != null and act.? == action) {
-                legal = true;
-            }
-        }
+        const legal = (legal_acts.find(action) catch 10) < legal_acts.num_left();
+
         if (!legal) return GameError.ActionNotLegalGivenGameState;
 
         switch (@intFromEnum(action) ) {
-            @intFromEnum(Action.Pick) => self.perform_pick_action(),
+            @intFromEnum(Action.Pick) => try self.perform_pick_action(),
             @intFromEnum(Action.Pass) => try self.perform_pass_action(),
-            // Action.Call => self.perform_call_action(action),
             @intFromEnum(Action.CallSpades)...@intFromEnum(Action.CallClubs)=> self.perform_call_action(action),
-            @intFromEnum(Action.PlayS9)...@intFromEnum(Action.PlayCA) => {
-                try self.perform_play_action(action);
-
-                if (self.num_cards_in_center() == 4) {
-                    self.reflect_end_trick();
-                }
-            },
+            @intFromEnum(Action.PlayS9)...@intFromEnum(Action.PlayCA) => try self.perform_play_action(action),
             @intFromEnum(Action.DiscardS9)...@intFromEnum(Action.DiscardCA) => try self.perform_discard_action(action),
             else => unreachable,
         }
 
         // Record that I have taken this action
-        self.turns_taken[self.num_turns_taken()] = .{old_player, action};
+        self.turns_taken.push(.{old_player, action}) catch return GameError.GameIsOver;
 
         return .{self.curr_player_id, self.get_scoped_state()};
     }
@@ -253,60 +240,71 @@ pub const Game = struct {
         }
 
         // remove the action
-        self.turns_taken[self.num_turns_taken()-1] = null;
+        _ = self.turns_taken.pop();
 
         return .{self.curr_player_id, self.get_scoped_state()};
     }
 
     /// Returns an array of size 6 containing all possible actions a player can take.  
     /// The array is 6 long because at most a player can have 6 choices at once, never more.
-    pub fn get_legal_actions(self: *const Game) [6:null]?Action {
-        var result: [6:null]?Action = .{null} ** 6;
+    pub fn get_legal_actions(self: *const Game) LegalActions {
+        var result: LegalActions = LegalActions.new();
         if (self.is_over) return result;
 
         const active_player = &self.players[self.curr_player_id];
 
         var play_hand: bool = true;
 
-        if (active_player.cards_left() == 6) { // dealer must discard
-            play_hand = false;
+        if (active_player.cards_left() == 6) { // dealer must discad
             // exit control flow, will translate whole hand into result for discard action at bottom.
+            play_hand = false;
+
         } else if (self.trump == null) { // deciding trump
+
             if (self.flipped_choice == null) { // flipped card available
-                result[0] = Action.Pick;
-                result[1] = Action.Pass;
+    
+                result.push(Action.Pick) catch unreachable;
+                result.push(Action.Pass) catch unreachable;
+
             } else { // else flipped_choice is TurnedDown, because PickedUp would set trump. All but dealer can pass
-                result = .{Action.CallSpades, Action.CallHearts, Action.CallDiamonds, Action.CallClubs, null, null};
-                const turned_down_suit_ind: usize = @intFromEnum(self.flipped_card.suit);
-                result[turned_down_suit_ind] = result[3];
-                result[3] = if (self.curr_player_id == self.dealer_id) null else Action.Pass;
+
+                result.push(Action.CallSpades) catch unreachable;
+                result.push(Action.CallHearts) catch unreachable;
+                result.push(Action.CallDiamonds) catch unreachable;
+                result.push(Action.CallClubs) catch unreachable;
+
+                // works because I pushed into `result` using same order as Suit.range
+                result.remove_ind( @intFromEnum(self.flipped_card.suit) );
+                result.push( if (self.curr_player_id == self.dealer_id) null else Action.Pass ) catch unreachable;
             }
+
             return result;
+
         } else if (self.get_led_suit() == null) { 
             // can play any card, exit control flow 
+
         } else { // either must follow suit, or play any card
             const led_suit = self.get_led_suit().?;
-            var num_led_suit_in_hand: u3 = 0;
+
             for (0..active_player.cards_left()) |ind| {
-                const curr_card = active_player.hand[ind].?;
+                const curr_card = active_player.hand.get(ind).?;
 
                 const is_left: bool = curr_card.isLeftBower(self.trump.?);
                 const is_led_suit: bool = curr_card.suit.eq(led_suit);
                 if ((!is_left and is_led_suit) or (is_left and self.trump == led_suit)) {
-                    result[num_led_suit_in_hand] = Action.FromCard(curr_card, true);
-                    num_led_suit_in_hand += 1;
+                    result.push(Action.FromCard(curr_card, true)) catch unreachable;
                 }
             }
 
-            if (num_led_suit_in_hand > 0) return result; // must follow suit
+            if (result.num_left() > 0) return result; // must follow suit
             // exit control flow, can play any card
         }
 
         // Here only if I can't follow suit, or I am leading, or I may discard any card in my hand. 
         // Either way I will go through my whole hand.
         for (0..6) |ind| {
-            const curr_card = active_player.hand[ind];
-            result[ind] = if (curr_card == null) null else Action.FromCard(curr_card.?, play_hand);
+            const curr_card = active_player.hand.get(ind);
+            result.push( if (curr_card == null) null else Action.FromCard(curr_card.?, play_hand) ) catch unreachable;
         }
 
         return result;
@@ -343,9 +341,9 @@ pub const Game = struct {
     /// 4. flipped choice is set to picked up
     ///      - prevents this method from being called again
     /// 5. Trump is set to suit of flipped card
-    fn perform_pick_action(self: *Game) void {
+    fn perform_pick_action(self: *Game) !void {
 
-        self.players[self.dealer_id].pick_up_6th_card(self.flipped_card);
+        self.players[self.dealer_id].pick_up_6th_card(self.flipped_card) catch unreachable;
         self.curr_player_id = self.dealer_id;
         self.caller_id = self.curr_player_id;
         self.flipped_choice = FlippedChoice.PickedUp;
@@ -359,7 +357,7 @@ pub const Game = struct {
     /// 4. flipped choice is set to null
     /// 5. Trump is set to none
     fn undo_pick_action(self: *Game) Player.PlayerError!void {
-        try self.players[self.dealer_id].discard_card(self.flipped_card);
+        try self.players[self.dealer_id].discard_card(self.flipped_card); // BUG: should be able to `catch unreachable;`
         self.curr_player_id = self.caller_id.?;
         self.caller_id = null;
         self.flipped_choice = null;
@@ -423,41 +421,45 @@ pub const Game = struct {
     ///     - If this player plays the 4th (last) card of the trick, another method will overwrite this
     fn perform_play_action(self: *Game, action: Action) !void {
         const card = try action.ToCard();
-        try self.players[self.curr_player_id].discard_card(card);
+        self.players[self.curr_player_id].discard_card(card) catch unreachable;
 
-        const open_center_ind = self.num_cards_in_center();
-        self.center[open_center_ind] = card;
+        self.center.push(card) catch unreachable;
  
         self.curr_player_id +%= 1;
+
+        if (self.num_cards_in_center() == 4) {
+            self.reflect_end_trick();
+        }
     }
 
     /// undos this play action. Assumes it is only called from a valid state
     /// 1. Depending on whether the last played card ended a trick or not...
-    ///     - if it did: (current player won last trick)
+    ///     - if it did: Center is empty after a card was played implies that play (what we are undoing) ended a trick
     ///         - takes away trick given to winner
     ///         - reset curr_player_id to previous end-of-order player
     ///         - reset center to be full of the 3 cards that came before this one
     ///     - if it did NOT:
     ///         - reset curr_player_id to be one less than current (wrapped)
     ///         - set latest card in center to null
-    /// 2. puts the card played back in curr players hand
-    fn undo_play_action(self: *Game, action: Action) (Player.PlayerError || Action.ActionError)!void {
+    /// 2. puts the card played back in curr players hand (they just played it so there will be room)
+    fn undo_play_action(self: *Game, action: Action) !void {
         if (self.num_cards_in_center() == 0) {
-            try self.players[self.curr_player_id].take_away_trick();
+            try self.players[self.curr_player_id].take_away_trick(); //BUG: should be able to `catch unreachable;`
             self.curr_player_id = self.previous_last_in_order_id.?;
             const act_ind = self.ind_of_action_taken(action);
-    
+
             inline for (1..4) |offset| {
-                const act_card = try self.turns_taken[act_ind-offset].?[1].ToCard();
-                self.center[3-offset] = act_card;
+                const ind_of_play_action = act_ind - 4 + offset; // goes from -3, -2, -1
+                const act_card = self.turns_taken.get(ind_of_play_action).?[1].ToCard() catch unreachable;
+                self.center.push(act_card) catch unreachable;
             }
         } else {
             self.curr_player_id -%= 1;
-            self.center[self.num_cards_in_center()-1] = null;
+            _ = self.center.pop();
         }
 
-        const card = try action.ToCard();
-        try self.players[self.curr_player_id].put_card_back_in_hand(card);
+        const card = action.ToCard() catch unreachable;
+        self.players[self.curr_player_id].put_card_back_in_hand(card) catch unreachable;
     }
 
 
@@ -466,18 +468,18 @@ pub const Game = struct {
     /// 2. remove specified card from dealers hand
     fn perform_discard_action(self: *Game, action: Action) !void {
         const card = try action.ToCard();
-        try self.players[self.dealer_id].discard_card(card);
+        self.players[self.dealer_id].discard_card(card) catch unreachable;
         self.curr_player_id = self.dealer_id +% 1;
     }
 
     /// undos this discard action. Assumes it is only called from a valid state
     /// 1. sets current player to dealer
     /// 2. adds discarded card to dealers hand
-    fn undo_discard_action(self: *Game, action: Action) Action.ActionError!void {
+    fn undo_discard_action(self: *Game, action: Action) (Action.ActionError || Player.PlayerError)!void {
         const card = try action.ToCard();
         self.curr_player_id = self.dealer_id;
         const deck_card = card;
-        self.players[self.dealer_id].pick_up_6th_card(deck_card);
+        try self.players[self.dealer_id].pick_up_6th_card(deck_card);
     }
 
 
@@ -511,13 +513,15 @@ pub const Game = struct {
     /// Assumes the game is in a state where center has 4 cards.  
     /// Leverages that indices of cards in center match the id of who played them in `self.order`
     fn judge_trick(self: *Game) PlayerId {
+        std.debug.assert(self.center.num_left() == 4);
+
         var best_player: PlayerId = self.order[0];
-        var best_card: Card = self.center[0].?;
+        var best_card: Card = self.center.get(0).?;
 
         for (1..4) |ind| {
-            const card_comparison = self.center[ind].?.gt(best_card, self.trump.?);
+            const card_comparison = self.center.get(ind).?.gt(best_card, self.trump.?);
             if (card_comparison != null and card_comparison.?) {
-                best_card = self.center[ind].?;
+                best_card = self.center.get(ind).?;
                 best_player = self.order[ind];
             }
         }
@@ -555,7 +559,7 @@ pub const Game = struct {
 pub const ScopedState = struct {
     dealer_actor: PlayerId,
     current_actor: PlayerId,
-    hand: [6:null]?Card,
+    hand: Player.Hand,
 
     calling_actor: ?PlayerId,
     flipped_choice: ?FlippedChoice,
@@ -566,11 +570,11 @@ pub const ScopedState = struct {
     led_suit: ?Suit,
 
     order: [4]PlayerId,
-    center: [4:null]?Card,
+    center: CenterCards,
 
-    turns_taken: [29:null]?Turn,
+    turns_taken: TurnsTaken,
 
-    legal_actions: [6:null]?Action,
+    legal_actions: LegalActions,
 };
 
 
@@ -584,7 +588,7 @@ test "create_game" {
     for (0..29) |_| {
         if (game.is_over == true) break;
         const acts = game.get_legal_actions();
-        _ = try game.step(acts[0].?);
+        _ = try game.step(acts.get(0).?);
         // std.debug.print("{any}\n", .{acts});
     }
     try expect(game.is_over == true);
@@ -611,14 +615,7 @@ test "play 10,000 games randomly" {
             if (game.is_over == true) break;
 
             const acts = game.get_legal_actions();
-            var num_act: usize = 6;
-            num_acts: for (acts, 0..) |act, count| {
-                if (act == null) {
-                    num_act = count;
-                    break :num_acts;
-                }
-            }
-            const act = acts[prng.random().intRangeAtMost(usize, 1, num_act)-1];
+            const act = acts.get(prng.random().intRangeAtMost(usize, 1, acts.num_left())-1);
         
             _ = try game.step(act.?);
         }

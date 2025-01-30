@@ -19,7 +19,7 @@ pub const Deck = struct {
     };
 
     /// Create an unshuffled deck object.
-    pub fn new() DeckError!Deck {
+    pub fn new() Deck {
         var deck = Deck{
             .card_buffer = undefined,
             .deal_index = 0,
@@ -77,7 +77,7 @@ pub const Deck = struct {
 test "create_unshuffled" {
     const expect = std.testing.expect;
 
-    var deck = try Deck.new();
+    var deck = Deck.new();
 
     try expect(deck.card_buffer[0].eq(Card{ .suit = Suit.Spades, .rank = Rank.Nine }));
     try expect(deck.card_buffer[23].eq(Card{ .suit = Suit.Clubs, .rank = Rank.Ace }));
@@ -88,7 +88,7 @@ test "deal euchre deck" {
     const expect = std.testing.expect;
     const expectErr = std.testing.expectError;
 
-    var deck = try Deck.new();
+    var deck = Deck.new();
 
     const hand1 = try deck.DealFiveCards();
     const expected_hand1 = [5]Card{ try Card.FromStr("S9"), try Card.FromStr("ST"), try Card.FromStr("SJ"), try Card.FromStr("SQ"), try Card.FromStr("SK") };
