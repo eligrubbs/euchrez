@@ -211,15 +211,8 @@ pub const Game = struct {
         switch (@intFromEnum(action) ) {
             @intFromEnum(Action.Pick) => try self.perform_pick_action(),
             @intFromEnum(Action.Pass) => try self.perform_pass_action(),
-            // Action.Call => self.perform_call_action(action),
             @intFromEnum(Action.CallSpades)...@intFromEnum(Action.CallClubs)=> self.perform_call_action(action),
-            @intFromEnum(Action.PlayS9)...@intFromEnum(Action.PlayCA) => {
-                try self.perform_play_action(action);
-
-                if (self.num_cards_in_center() == 4) {
-                    self.reflect_end_trick();
-                }
-            },
+            @intFromEnum(Action.PlayS9)...@intFromEnum(Action.PlayCA) => try self.perform_play_action(action),
             @intFromEnum(Action.DiscardS9)...@intFromEnum(Action.DiscardCA) => try self.perform_discard_action(action),
             else => unreachable,
         }
@@ -267,22 +260,31 @@ pub const Game = struct {
         if (active_player.cards_left() == 6) { // dealer must discad
             // exit control flow, will translate whole hand into result for discard action at bottom.
             play_hand = false;
+
         } else if (self.trump == null) { // deciding trump
+
             if (self.flipped_choice == null) { // flipped card available
+    
                 result.push(Action.Pick) catch {};
                 result.push(Action.Pass) catch {};
+
             } else { // else flipped_choice is TurnedDown, because PickedUp would set trump. All but dealer can pass
+
                 result.push(Action.CallSpades) catch {};
                 result.push(Action.CallHearts) catch {};
                 result.push(Action.CallDiamonds) catch {};
                 result.push(Action.CallClubs) catch {};
+
                 // works because I pushed into `result` using same order as Suit.range
                 result.remove_ind( @intFromEnum(self.flipped_card.suit) );
                 result.push( if (self.curr_player_id == self.dealer_id) null else Action.Pass ) catch {};
             }
+
             return result;
+
         } else if (self.get_led_suit() == null) { 
             // can play any card, exit control flow 
+
         } else { // either must follow suit, or play any card
             const led_suit = self.get_led_suit().?;
 
@@ -427,6 +429,10 @@ pub const Game = struct {
         self.center[open_center_ind] = card;
  
         self.curr_player_id +%= 1;
+
+        if (self.num_cards_in_center() == 4) {
+                    self.reflect_end_trick();
+        }
     }
 
     /// undos this play action. Assumes it is only called from a valid state
