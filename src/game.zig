@@ -513,6 +513,8 @@ pub const Game = struct {
     /// Assumes the game is in a state where center has 4 cards.  
     /// Leverages that indices of cards in center match the id of who played them in `self.order`
     fn judge_trick(self: *Game) PlayerId {
+        std.debug.assert(self.center.num_left() == 4);
+
         var best_player: PlayerId = self.order[0];
         var best_card: Card = self.center.get(0).?;
 

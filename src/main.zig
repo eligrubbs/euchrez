@@ -35,7 +35,7 @@ pub fn main() !void {
         for (0..29) |_| {
             if (game.is_over == true) break;
             const acts = game.get_legal_actions();
-            _ = try game.step(acts[0].?);
+            _ = try game.step(acts.get(0).?);
             // std.debug.print("{any}\n", .{acts});
         }
     }
