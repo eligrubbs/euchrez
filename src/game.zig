@@ -441,8 +441,8 @@ pub const Game = struct {
 
             // number 2 and number 3 in this loop
             inline for (0..4) |offset| {
-                    const ind_of_play_action = num_turns - 4 + offset; // goes from -4, -3, -2, -1
-                    const last_turn = self.turns_taken.get(ind_of_play_action).?;
+                    // goes from -4, -3, -2, -1 from num_turns
+                    const last_turn = self.turns_taken.get(num_turns - 4 + offset).?;
                     const act_card = last_turn[1].ToCard() catch unreachable;
                     self.order[offset] = last_turn[0];
                     self.center.push(act_card) catch unreachable;
