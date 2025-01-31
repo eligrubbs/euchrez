@@ -5,6 +5,7 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
     return struct {
         const Self = @This();
         data: [len:null]?T,
+        max: usize = len,
 
         pub const ArrayError = error{
             IndexOutOfBounds,

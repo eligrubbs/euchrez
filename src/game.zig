@@ -211,16 +211,16 @@ pub const Game = struct {
         if (!legal) return GameError.ActionNotLegalGivenGameState;
 
         switch (@intFromEnum(action) ) {
-            @intFromEnum(Action.Pick) => try self.perform_pick_action(),
-            @intFromEnum(Action.Pass) => try self.perform_pass_action(),
+            @intFromEnum(Action.Pick) => self.perform_pick_action(),
+            @intFromEnum(Action.Pass) => self.perform_pass_action(),
             @intFromEnum(Action.CallSpades)...@intFromEnum(Action.CallClubs)=> self.perform_call_action(action),
-            @intFromEnum(Action.PlayS9)...@intFromEnum(Action.PlayCA) => try self.perform_play_action(action),
+            @intFromEnum(Action.PlayS9)...@intFromEnum(Action.PlayCA) => self.perform_play_action(action),
             @intFromEnum(Action.DiscardS9)...@intFromEnum(Action.DiscardCA) => try self.perform_discard_action(action),
             else => unreachable,
         }
 
-        // Record that I have taken this action
-        self.turns_taken.push(.{old_player, action}) catch return GameError.GameIsOver;
+        // Record that I have taken this action. above code (get_legal_actions) gurantees this will work.
+        self.turns_taken.push(.{old_player, action}) catch unreachable;
 
         return .{self.curr_player_id, self.get_scoped_state()};
     }
@@ -235,10 +235,10 @@ pub const Game = struct {
         const the_last_action = the_last_turn.?[1];
 
         switch (@intFromEnum(the_last_action)) {
-            @intFromEnum(Action.Pick) => try self.undo_pick_action(),
+            @intFromEnum(Action.Pick) => self.undo_pick_action(),
             @intFromEnum(Action.Pass) => self.undo_pass_action(),
             @intFromEnum(Action.CallSpades)...@intFromEnum(Action.CallClubs) => self.undo_call_action(),
-            @intFromEnum(Action.PlayS9)...@intFromEnum(Action.PlayCA) => try self.undo_play_action(the_last_action),
+            @intFromEnum(Action.PlayS9)...@intFromEnum(Action.PlayCA) => self.undo_play_action(the_last_action),
             @intFromEnum(Action.DiscardS9)...@intFromEnum(Action.DiscardCA) => try self.undo_discard_action(the_last_action),
             else => unreachable,
         }
@@ -345,7 +345,7 @@ pub const Game = struct {
     /// 4. flipped choice is set to picked up
     ///      - prevents this method from being called again
     /// 5. Trump is set to suit of flipped card
-    fn perform_pick_action(self: *Game) !void {
+    fn perform_pick_action(self: *Game) void {
 
         self.players[self.dealer_id].pick_up_6th_card(self.flipped_card) catch unreachable;
         self.curr_player_id = self.dealer_id;
@@ -360,7 +360,7 @@ pub const Game = struct {
     /// 3. `caller_id` is set to null
     /// 4. flipped choice is set to null
     /// 5. Trump is set to none
-    fn undo_pick_action(self: *Game) Player.PlayerError!void {
+    fn undo_pick_action(self: *Game) void {
         self.players[self.dealer_id].discard_card(self.flipped_card) catch unreachable;
         self.curr_player_id = self.caller_id.?;
         self.caller_id = null;
@@ -372,7 +372,7 @@ pub const Game = struct {
     /// Changes to game state:
     /// 1. if dealer, set flipped choice to turned down
     /// 2. player is incremented by 1 wrapping
-    fn perform_pass_action(self: *Game) GameError!void {
+    fn perform_pass_action(self: *Game) void {
         if (self.curr_player_id == self.dealer_id)
             self.flipped_choice = FlippedChoice.TurnedDown;
 
@@ -423,8 +423,8 @@ pub const Game = struct {
     /// 2. adds played card to center
     /// 3. sets current player to player left of current (player_id is one higher, wrapped)
     ///     - If this player plays the 4th (last) card of the trick, another method will overwrite this
-    fn perform_play_action(self: *Game, action: Action) !void {
-        const card = try action.ToCard();
+    fn perform_play_action(self: *Game, action: Action) void {
+        const card = action.ToCard() catch unreachable;
         self.players[self.curr_player_id].discard_card(card) catch unreachable;
 
         std.debug.assert(self.center.num_left() < 4);
@@ -467,7 +467,7 @@ pub const Game = struct {
     ///         - reset curr_player_id to be one less than current (wrapped)
     ///         - set latest card in center to null
     /// 2. puts the card played back in curr players hand (they just played it so there will be room)
-    fn undo_play_action(self: *Game, action: Action) !void {
+    fn undo_play_action(self: *Game, action: Action) void {
         const card = action.ToCard() catch unreachable;
 
         if (self.num_cards_in_center() == 0) { // this action ended a trick
@@ -519,7 +519,7 @@ pub const Game = struct {
     /// Changes the game state:
     /// 1. sets current player to player left of dealer
     /// 2. remove specified card from dealers hand
-    fn perform_discard_action(self: *Game, action: Action) !void {
+    fn perform_discard_action(self: *Game, action: Action) void {
         const card = action.ToCard() catch unreachable;
         self.players[self.dealer_id].discard_card(card) catch unreachable;
         self.curr_player_id = self.dealer_id +% 1;
@@ -528,7 +528,7 @@ pub const Game = struct {
     /// undos this discard action. Assumes it is only called from a valid state
     /// 1. sets current player to dealer
     /// 2. adds discarded card to dealers hand
-    fn undo_discard_action(self: *Game, action: Action) (Action.ActionError || Player.PlayerError)!void {
+    fn undo_discard_action(self: *Game, action: Action) void {
         const card = action.ToCard() catch unreachable;
         self.curr_player_id = self.dealer_id;
         const deck_card = card;
