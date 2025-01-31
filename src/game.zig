@@ -21,6 +21,7 @@ pub const CenterCards: type = NullSentinelArray(Card, 4);
 pub const Game = struct {
     const num_players = 4; // do not change
     const empty_center: CenterCards = CenterCards.new();
+    const Winners: type = NullSentinelArray(PlayerId, 5);
 
     config: GameConfig,
     prng: std.Random.DefaultPrng,
@@ -41,6 +42,7 @@ pub const Game = struct {
 
     order: [4]PlayerId,
     previous_last_in_order_id: ?PlayerId, // used only for undoing play actions
+    previous_winners: Winners,
     center: CenterCards, // 4 is maximum number of cards that can be in the middle
     trump: ?Suit,
 
@@ -97,6 +99,7 @@ pub const Game = struct {
 
             .order = undefined,
             .previous_last_in_order_id = null,
+            .previous_winners = Winners.new(),
             .center = empty_center,
             .trump = null,
 
@@ -139,6 +142,7 @@ pub const Game = struct {
 
         self.order = Game.order_starting_from(self.curr_player_id);
         self.previous_last_in_order_id = null;
+        self.previous_winners = Winners.new();
         self.center = empty_center;
         self.trump = null;
 
@@ -357,7 +361,7 @@ pub const Game = struct {
     /// 4. flipped choice is set to null
     /// 5. Trump is set to none
     fn undo_pick_action(self: *Game) Player.PlayerError!void {
-        try self.players[self.dealer_id].discard_card(self.flipped_card); // BUG: should be able to `catch unreachable;`
+        self.players[self.dealer_id].discard_card(self.flipped_card) catch unreachable;
         self.curr_player_id = self.caller_id.?;
         self.caller_id = null;
         self.flipped_choice = null;
@@ -423,12 +427,28 @@ pub const Game = struct {
         const card = try action.ToCard();
         self.players[self.curr_player_id].discard_card(card) catch unreachable;
 
+        std.debug.assert(self.center.num_left() < 4);
         self.center.push(card) catch unreachable;
- 
-        self.curr_player_id +%= 1;
 
-        if (self.num_cards_in_center() == 4) {
-            self.reflect_end_trick();
+        if (self.num_cards_in_center() == 4) { // end trick
+            const winner_id = self.judge_trick();
+            self.previous_winners.push(winner_id) catch unreachable;
+            self.players[winner_id].award_trick();
+
+            std.debug.assert(self.order[3] == self.curr_player_id);
+            self.previous_last_in_order_id = self.curr_player_id;
+            self.order = Game.order_starting_from(winner_id);
+            self.center = empty_center;
+
+            // the winner having no more cards implies no one has cards
+            if (self.players[self.curr_player_id].cards_left() == 0) {
+                self.is_over = true;
+                self.scores = self.score_round();
+            }
+            // set next player to the winner, even if game is over now
+            self.curr_player_id = winner_id;
+        } else {
+            self.curr_player_id +%= 1;
         }
     }
 
@@ -437,28 +457,61 @@ pub const Game = struct {
     ///     - if it did: Center is empty after a card was played implies that play (what we are undoing) ended a trick
     ///         - takes away trick given to winner
     ///         - reset curr_player_id to previous end-of-order player
-    ///         - reset center to be full of the 3 cards that came before this one
+    ///         If the current player has no cards (game is over)
+    ///             - say game is not over
+    ///             - undo scoring
+    ///         - restore center to the 4 cards that were there
+    ///         - restore the order using the previous turns taken
+    ///         - restore previous last in order to last player of last trick or null if it was the dealer discarding a card
     ///     - if it did NOT:
     ///         - reset curr_player_id to be one less than current (wrapped)
     ///         - set latest card in center to null
     /// 2. puts the card played back in curr players hand (they just played it so there will be room)
     fn undo_play_action(self: *Game, action: Action) !void {
-        if (self.num_cards_in_center() == 0) {
-            try self.players[self.curr_player_id].take_away_trick(); //BUG: should be able to `catch unreachable;`
-            self.curr_player_id = self.previous_last_in_order_id.?;
-            const act_ind = self.ind_of_action_taken(action);
+        const card = action.ToCard() catch unreachable;
 
-            inline for (1..4) |offset| {
-                const ind_of_play_action = act_ind - 4 + offset; // goes from -3, -2, -1
-                const act_card = self.turns_taken.get(ind_of_play_action).?[1].ToCard() catch unreachable;
-                self.center.push(act_card) catch unreachable;
+        if (self.num_cards_in_center() == 0) { // this action ended a trick
+            // it takes at least 6 turns to get to a trick end (pick, discard, 4 plays)
+            const num_turns = self.turns_taken.num_left();
+            std.debug.assert(num_turns > 5);
+
+            if (self.players[self.curr_player_id].cards_left() == 0) {
+                self.is_over = false;
+                self.scores = null;
             }
+            // current player is the winner of this trick, so make it the person who played the card
+            // that ended this trick
+            std.debug.assert(self.turns_taken.get(num_turns-1).?[0] == self.previous_last_in_order_id.?);
+            self.curr_player_id = self.turns_taken.get(num_turns-1).?[0];
+
+            // number 2 and number 3 in this loop
+            inline for (0..4) |offset| {
+                    const ind_of_play_action = num_turns - 4 + offset; // goes from -4, -3, -2, -1
+                    const last_turn = self.turns_taken.get(ind_of_play_action).?;
+                    const act_card = last_turn[1].ToCard() catch unreachable;
+                    self.order[offset] = last_turn[0];
+                    self.center.push(act_card) catch unreachable;
+            }
+            std.debug.assert(self.center.num_left() == 4);
+
+            const candidate_turn = self.turns_taken.get(num_turns-5).?;
+            if (@intFromEnum(candidate_turn[1]) >= @intFromEnum(Action.DiscardS9) and 
+                @intFromEnum(candidate_turn[1]) <= @intFromEnum(Action.DiscardCA)) {
+                // this was the first trick, so there was no previous
+                self.previous_last_in_order_id = null;
+            } else {
+                self.previous_last_in_order_id = candidate_turn[0];
+            }
+            // current player right now was the winner
+            const old_winner = self.previous_winners.pop().?;
+            self.players[old_winner].take_away_trick() catch unreachable;
+
         } else {
+            std.debug.assert(self.center.num_left() < 4 and self.center.num_left() > 0);
             self.curr_player_id -%= 1;
-            _ = self.center.pop();
         }
 
-        const card = action.ToCard() catch unreachable;
+        _ = self.center.pop();
         self.players[self.curr_player_id].put_card_back_in_hand(card) catch unreachable;
     }
 
@@ -467,7 +520,7 @@ pub const Game = struct {
     /// 1. sets current player to player left of dealer
     /// 2. remove specified card from dealers hand
     fn perform_discard_action(self: *Game, action: Action) !void {
-        const card = try action.ToCard();
+        const card = action.ToCard() catch unreachable;
         self.players[self.dealer_id].discard_card(card) catch unreachable;
         self.curr_player_id = self.dealer_id +% 1;
     }
@@ -476,10 +529,11 @@ pub const Game = struct {
     /// 1. sets current player to dealer
     /// 2. adds discarded card to dealers hand
     fn undo_discard_action(self: *Game, action: Action) (Action.ActionError || Player.PlayerError)!void {
-        const card = try action.ToCard();
+        const card = action.ToCard() catch unreachable;
         self.curr_player_id = self.dealer_id;
         const deck_card = card;
-        try self.players[self.dealer_id].pick_up_6th_card(deck_card);
+        std.debug.assert(self.players[self.dealer_id].hand.num_left() == 5);
+        self.players[self.dealer_id].pick_up_6th_card(deck_card) catch unreachable;
     }
 
 
@@ -492,12 +546,12 @@ pub const Game = struct {
     /// 6. Decide if the game is over and handle points as well
     fn reflect_end_trick(self: *Game) void {
         const winner_id = self.judge_trick();
+        self.previous_winners.push(winner_id) catch unreachable;
         self.curr_player_id = winner_id;
         self.players[winner_id].award_trick();
 
         self.previous_last_in_order_id = self.order[3];
         self.order = Game.order_starting_from(winner_id);
-
         self.center = empty_center;
 
         // the winner having no more cards implies no one has cards
@@ -505,6 +559,50 @@ pub const Game = struct {
             self.is_over = true;
             self.scores = self.score_round();
         }
+    }
+
+    /// Invariants:
+    /// 1. This method will always be called in the first `step_back` once a game is over
+    /// 2. This method is only called when the last turn taken ended a trick
+    /// 
+    /// Changes game state
+    /// 1. If the current player has no cards (game is over)
+    ///     - say game is not over
+    ///     - undo scoring
+    /// 2. restore center to the 4 cards that were there
+    /// 3. restore the order using the previous turns taken
+    /// 4. restore previous last in order to last player of last trick or null if it was the dealer discarding a card
+    fn unreflect_end_of_trick(self: *Game) void {
+        // it takes at least 6 turns to get to a trick end (pick, discard, 4 plays)
+        const num_turns = self.turns_taken.num_left();
+        if (num_turns < 5) unreachable;
+
+        if (self.players[self.curr_player_id].cards_left() == 0) {
+            self.is_over = false;
+            self.scores = null;
+        }
+
+        // number 2 and number 3 in this loop
+        inline for (0..4) |offset| {
+                const ind_of_play_action = num_turns - 4 + offset; // goes from -4, -3, -2, -1
+                const last_turn = self.turns_taken.get(ind_of_play_action).?;
+                const act_card = last_turn[1].ToCard() catch unreachable;
+                self.order[offset] = last_turn[0];
+                self.center.push(act_card) catch unreachable;
+        }
+
+        const candidate_turn = self.turns_taken.get(num_turns-5).?;
+        if (@intFromEnum(candidate_turn[1]) >= @intFromEnum(Action.DiscardS9) and 
+            @intFromEnum(candidate_turn[1]) <= @intFromEnum(Action.DiscardCA)) {
+            // this was the first trick, so there was no previous
+            self.previous_last_in_order_id = null;
+        } else {
+            self.previous_last_in_order_id = candidate_turn[0];
+        }
+        // current player right now was the winner
+        self.players[self.curr_player_id].take_away_trick() catch unreachable;
+        self.curr_player_id = self.order[3];
+
     }
 
 
