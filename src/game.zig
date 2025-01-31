@@ -389,8 +389,14 @@ pub const Game = struct {
     /// Changes the game state:
     /// 1. removes played card from players hand
     /// 2. adds played card to center
-    /// 3. sets current player to player left of current (player_id is one higher, wrapped)
-    ///     - If this player plays the 4th (last) card of the trick, another method will overwrite this
+    /// 3. Handles trick end logic OR sets current player to player on the left (+1 wrapping)
+    /// 
+    /// Trick end logic:
+    ///     1. Determine winner and add winner to `previous_winner` stack. Award them a trick
+    ///     2. Save that the current player (who ended trick) as the previous last trick ender
+    ///     3. Reset order based on winner and empty center
+    ///     4. Set current player to winner
+    ///     5. If winners hand == empty then game is over
     fn perform_play_action(self: *Game, action: Action) void {
         const card = action.ToCard() catch unreachable;
         self.players[self.curr_player_id].discard_card(card) catch unreachable;
@@ -408,33 +414,19 @@ pub const Game = struct {
             self.order = Game.order_starting_from(winner_id);
             self.center = empty_center;
 
+            // set next player to the winner, even if game is over now
+            self.curr_player_id = winner_id;
             // the winner having no more cards implies no one has cards
             if (self.players[self.curr_player_id].cards_left() == 0) {
                 self.is_over = true;
                 self.scores = self.score_round();
             }
-            // set next player to the winner, even if game is over now
-            self.curr_player_id = winner_id;
         } else {
             self.curr_player_id +%= 1;
         }
     }
 
-    /// undos this play action. Assumes it is only called from a valid state
-    /// 1. Depending on whether the last played card ended a trick or not...
-    ///     - if it did: Center is empty after a card was played implies that play (what we are undoing) ended a trick
-    ///         - takes away trick given to winner
-    ///         - reset curr_player_id to previous end-of-order player
-    ///         If the current player has no cards (game is over)
-    ///             - say game is not over
-    ///             - undo scoring
-    ///         - restore center to the 4 cards that were there
-    ///         - restore the order using the previous turns taken
-    ///         - restore previous last in order to last player of last trick or null if it was the dealer discarding a card
-    ///     - if it did NOT:
-    ///         - reset curr_player_id to be one less than current (wrapped)
-    ///         - set latest card in center to null
-    /// 2. puts the card played back in curr players hand (they just played it so there will be room)
+    /// Mirror image of `perform_play_action`
     fn undo_play_action(self: *Game, action: Action) void {
         const card = action.ToCard() catch unreachable;
 
