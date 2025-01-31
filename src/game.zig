@@ -41,7 +41,6 @@ pub const Game = struct {
     flipped_choice: ?FlippedChoice,
 
     order: [4]PlayerId,
-    previous_last_in_order_id: ?PlayerId, // used only for undoing play actions
     previous_winners: Winners,
     center: CenterCards, // 4 is maximum number of cards that can be in the middle
     trump: ?Suit,
@@ -98,7 +97,6 @@ pub const Game = struct {
             .flipped_choice = null,
 
             .order = undefined,
-            .previous_last_in_order_id = null,
             .previous_winners = Winners.new(),
             .center = empty_center,
             .trump = null,
@@ -141,7 +139,6 @@ pub const Game = struct {
         self.flipped_choice = null;
 
         self.order = Game.order_starting_from(self.curr_player_id);
-        self.previous_last_in_order_id = null;
         self.previous_winners = Winners.new();
         self.center = empty_center;
         self.trump = null;
@@ -410,7 +407,6 @@ pub const Game = struct {
             self.players[winner_id].award_trick();
 
             std.debug.assert(self.order[3] == self.curr_player_id);
-            self.previous_last_in_order_id = self.curr_player_id;
             self.order = Game.order_starting_from(winner_id);
             self.center = empty_center;
 
@@ -441,7 +437,6 @@ pub const Game = struct {
             }
             // current player is the winner of this trick, so make it the person who played the card
             // that ended this trick
-            std.debug.assert(self.turns_taken.get(num_turns-1).?[0] == self.previous_last_in_order_id.?);
             self.curr_player_id = self.turns_taken.get(num_turns-1).?[0];
 
             // number 2 and number 3 in this loop
@@ -454,14 +449,6 @@ pub const Game = struct {
             }
             std.debug.assert(self.center.num_left() == 4);
 
-            const candidate_turn = self.turns_taken.get(num_turns-5).?;
-            if (@intFromEnum(candidate_turn[1]) >= @intFromEnum(Action.DiscardS9) and 
-                @intFromEnum(candidate_turn[1]) <= @intFromEnum(Action.DiscardCA)) {
-                // this was the first trick, so there was no previous
-                self.previous_last_in_order_id = null;
-            } else {
-                self.previous_last_in_order_id = candidate_turn[0];
-            }
             // current player right now was the winner
             const old_winner = self.previous_winners.pop().?;
             self.players[old_winner].take_away_trick() catch unreachable;
