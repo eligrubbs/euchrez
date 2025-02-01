@@ -63,8 +63,6 @@ pub const Game = struct {
         GameIsOver,
     };
 
-
-
     /// Creates a game object. It is NOT ready to be played.
     /// 
     /// Caller is responsible for cleaning up game's memory with `deinit`
