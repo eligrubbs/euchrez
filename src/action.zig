@@ -10,13 +10,7 @@ const Rank = @import("card/rank.zig").Rank;
 
 pub const Action = enum(u6) {
 
-    const total_actions = 54; // do not change
-
-    // Whether to call or pass on the flipped card
-    Pick, Pass,
-
-    // although not necessary, this order matches that of `Suit.Range()`
-    CallSpades, CallHearts, CallDiamonds, CallClubs, 
+    const total_actions = 59; // do not change
 
     // Play actions
     PlayS9, PlayST, PlaySJ, PlaySQ, PlaySK, PlaySA,
@@ -29,6 +23,15 @@ pub const Action = enum(u6) {
     DiscardH9, DiscardHT, DiscardHJ, DiscardHQ, DiscardHK, DiscardHA,
     DiscardD9, DiscardDT, DiscardDJ, DiscardDQ, DiscardDK, DiscardDA,
     DiscardC9, DiscardCT, DiscardCJ, DiscardCQ, DiscardCK, DiscardCA,
+
+    // although not necessary, this order matches that of `Suit.Range()`
+    CallSpades, CallHearts, CallDiamonds, CallClubs, 
+
+    // Go Alone
+    CallSpadesAlone, CallHeartsAlone, CallDiamondsAlone, CallClubsAlone, 
+
+    // Whether to call or pass on the flipped card
+    Pick, PickAlone, Pass,
 
     pub const ActionError = error{
         IntOutOfRange,
@@ -53,7 +56,7 @@ pub const Action = enum(u6) {
     }
 
     pub fn FromCard(card: Card, to_play: bool ) Action {
-        const suit_num: u6 = @as(u6, @intFromEnum(card.suit)) + 1;
+        const suit_num: u6 = @as(u6, @intFromEnum(card.suit));
         const rank_num: u6 = @intFromEnum(card.rank) - 9;
         const discard_offset: u6 = if (to_play == true) 0 else 24;
         const num = rank_num + (suit_num * 6) + discard_offset;
@@ -62,9 +65,9 @@ pub const Action = enum(u6) {
 
     pub fn ToCard(self: Action) ActionError!Card {
         const num: u6 = @intFromEnum(self);
-        if (num < 6) return ActionError.NotConvertableToCard;
+        if (num >= 48) return ActionError.NotConvertableToCard;
         const rank_num = (num % 6) + 9;
-        const suit_num = (( (if (num > 29) num + 6 else num) % 30) / 6) - 1;
+        const suit_num = (num % 24) / 6;
 
         return Card{.suit = @enumFromInt(suit_num), .rank = @enumFromInt(rank_num)};
     }
@@ -119,4 +122,7 @@ test "card_from_action" {
     var act = Action.PlayC9;
     const card = try act.ToCard();
     try expect(card.eq(try Card.FromStr("C9")));
+
+    try expect(Action.Pick.ToCard() == Action.ActionError.NotConvertableToCard);
+    try expect(Action.CallClubs.ToCard() == Action.ActionError.NotConvertableToCard);
 }
