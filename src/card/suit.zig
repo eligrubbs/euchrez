@@ -48,14 +48,8 @@ pub const Suit = enum(u2) {
         };
     }
 
-    
-
-    // pub fn range() [4]Suit {
-    //     return [4]Suit{Suit.Spades, Suit.Hearts, Suit.Diamonds, Suit.Clubs,};
-    // }
-
     /// Iterator for suits.  
-    /// In same order as `Suit.range()` 
+    /// In same order as `Suit.range` 
     /// 
     /// Recommended use is to call `new()`, although an explicit map can be made.
     pub fn Iterator() type {

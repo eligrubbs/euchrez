@@ -12,7 +12,7 @@ pub const Player = struct {
     hand: Hand,
 
     pub const PlayerError = error {
-        InitialHandNot5Cards,
+        HandNot5Cards,
         HandFull,
         CardNotPresent,
         AlgorithmError,
@@ -24,7 +24,7 @@ pub const Player = struct {
     pub fn new(p_id: PlayerId, hand: []const Card) PlayerError!Player {
         var p_hand: Hand = Hand.new();
 
-        if (hand.len != 5) return PlayerError.InitialHandNot5Cards;
+        if (hand.len != 5) return PlayerError.HandNot5Cards;
 
         // we know this will work because of the above check
         for (0..5) | ind| p_hand.push(hand[ind]) catch {};
@@ -42,7 +42,7 @@ pub const Player = struct {
     }
 
     pub fn pick_up_6th_card(self: *Player, card: Card) PlayerError!void {
-        if (self.hand.num_left() != 5) return PlayerError.InitialHandNot5Cards;
+        if (self.hand.num_left() != 5) return PlayerError.HandNot5Cards;
         self.hand.push(card) catch return PlayerError.HandFull;
     }
 

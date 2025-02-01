@@ -59,15 +59,9 @@ pub const Game = struct {
 
     const GameError = error {
         ActionNotLegalGivenGameState,
-        NotPlayable,
-        TrumpNotSet,
         GameHasNotStarted,
         GameIsOver,
-        KittyCardNotAvailable,
-        DealerMustCallAfterTurnedDownKittyCard,
-        TrumpAlreadySet,
-        ActionNotPreviouslyTaken,
-    } || Player.PlayerError || Card.CardError || Action.ActionError || CenterCards.ArrayError;
+    };
 
 
 
@@ -285,7 +279,7 @@ pub const Game = struct {
                 result.push(Action.CallDiamonds) catch unreachable;
                 result.push(Action.CallClubs) catch unreachable;
                 // works because I pushed into `result` using same order as Suit.range
-                result.remove_ind( @intFromEnum(self.flipped_card.suit) );
+                result.remove_ind( @intFromEnum(self.flipped_card.suit) ) catch unreachable;
 
                 result.push(Action.CallSpadesAlone) catch unreachable;
                 result.push(Action.CallHeartsAlone) catch unreachable;
@@ -293,7 +287,7 @@ pub const Game = struct {
                 result.push(Action.CallClubsAlone) catch unreachable;
                 // works because I pushed into `result` using same order as Suit.range
                 // need u3 conversion since suit is of u2. 2 added since 0 based indexing
-                result.remove_ind(2 + @as(u3, @intFromEnum(self.flipped_card.suit)));
+                result.remove_ind(2 + @as(u3, @intFromEnum(self.flipped_card.suit))) catch unreachable;
 
                 result.push( if (self.curr_player_id == self.dealer_id) null else Action.Pass ) catch unreachable;
             }

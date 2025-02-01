@@ -55,14 +55,13 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
         pub fn remove(self: *Self, item: T) ArrayError!void {
             const found_ind = try self.find(item);
 
-            self.remove_ind(found_ind);
+            self.remove_ind(found_ind) catch unreachable;
         }
 
         /// Remove the element at `ind` and shift all others to the left.
-        /// Will work if `ind` is not inside of the array or points to a null inside of the array.  
-        /// This is because to me a null sentinel array means after the last element you can imagine an infinity of nulls stretching into the distance
-        pub fn remove_ind(self: *Self, ind: usize) void {
-            if (ind >= len) return;
+        /// Will work if `ind` points to a null inside of the array.
+        pub fn remove_ind(self: *Self, ind: usize) ArrayError!void {
+            if (ind >= len) return ArrayError.IndexOutOfBounds;
             self.data[ind] = null;
             for ((ind+1)..len) |indd| {
                 if (self.data[indd] == null) break;
