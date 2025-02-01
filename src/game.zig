@@ -9,8 +9,8 @@ const Rank = @import("card/rank.zig").Rank;
 const Deck = @import("deck.zig").Deck;
 const Action = @import("action.zig").Action;
 const Player = @import("player.zig").Player;
-const PlayerId: type = @import("player.zig").PlayerId;
-const FlippedChoice = @import("action.zig").FlippedChoice;
+pub const PlayerId: type = @import("player.zig").PlayerId;
+pub const FlippedChoice = @import("action.zig").FlippedChoice;
 const NullSentinelArray = @import("nullarray.zig").NullSentinelArray;
 
 pub const Turn: type = struct{PlayerId,Action};
