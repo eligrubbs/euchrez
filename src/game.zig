@@ -18,6 +18,15 @@ pub const TurnsTaken: type = NullSentinelArray(Turn, 29);
 pub const LegalActions: type = NullSentinelArray(Action, 7);
 pub const CenterCards: type = NullSentinelArray(Card, 4);
 
+pub const GameConfig = struct {
+    /// Determines whether to print out to stdout the events of the game
+    verbose: bool = false,
+    /// Specify the dealer or `null` for a random dealer every `reset` unless `seed` is set.
+    dealer_id: ?PlayerId = null,
+    /// Specify the seed for consistent `reset` results or `null` for random `reset` every time.
+    seed: ?u64 = null,
+};
+
 pub const Game = struct {
     const num_players = 4; // do not change
     const empty_center: CenterCards = CenterCards.new();
@@ -60,14 +69,7 @@ pub const Game = struct {
         ActionNotPreviouslyTaken,
     } || Player.PlayerError || Card.CardError || Action.ActionError || CenterCards.ArrayError;
 
-    pub const GameConfig = struct {
-        /// Determines whether to print out to stdout the events of the game
-        verbose: bool = false,
-        /// Specify the dealer or `null` for a random dealer every `reset` unless `seed` is set.
-        dealer_id: ?PlayerId = null,
-        /// Specify the seed for consistent `reset` results or `null` for random `reset` every time.
-        seed: ?u64 = null,
-    };
+
 
     /// Creates a game object. It is NOT ready to be played.
     /// 

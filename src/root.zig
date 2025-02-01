@@ -11,6 +11,7 @@ pub const FlippedChoice: type = @import("action.zig").FlippedChoice;
 
 const game: type = @import("game.zig");
 pub const Game: type = game.Game;
+pub const GameConfig: type = game.GameConfig;
 pub const ScopedState: type = game.ScopedState;
 pub const PlayerId: type = game.PlayerId;
 pub const Turn: type = game.Turn;
