@@ -31,9 +31,8 @@ pub fn main() !void {
     for (0..games.len) |game_ind| {
         games[game_ind] = try Game.new(.{});
         var game: Game = games[game_ind];
-        try game.reset();
         for (0..29) |_| {
-            if (game.is_over == true) break;
+            if (game.is_over() == true) break;
             const acts = game.get_legal_actions();
             _ = try game.step(acts.get(0).?);
             // std.debug.print("{any}\n", .{acts});

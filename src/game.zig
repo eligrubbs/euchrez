@@ -32,30 +32,28 @@ pub const Game = struct {
     const empty_center: CenterCards = CenterCards.new();
     const Winners: type = NullSentinelArray(PlayerId, 5);
 
-    config: GameConfig,
+    
     prng: std.Random.DefaultPrng,
+    turns_taken: TurnsTaken, // maximum number of actions there can be in a euchre game.
 
-    was_initialized: bool, // make sure that reset is called before calling other methods
-    is_over: bool,
-    scores: ?[4]u3, // scores not null only at end of game
+    config: GameConfig,
 
     deck: Deck,
+    flipped_card: Card,
+    center: CenterCards, // 4 is maximum number of cards that can be in the middle
+
+    scores: ?[4]u3, // scores not null only at end of game
 
     players: [4]Player,
     dealer_id: PlayerId,
     curr_player_id: PlayerId,
     caller_id: ?PlayerId,
-    called_alone: ?bool,
-
-    flipped_card: Card,
-    flipped_choice: ?FlippedChoice,
-
     order: [4]PlayerId,
     previous_winners: Winners,
-    center: CenterCards, // 4 is maximum number of cards that can be in the middle
     trump: ?Suit,
+    called_alone: ?bool,
+    flipped_choice: ?FlippedChoice,
 
-    turns_taken: TurnsTaken, // maximum number of actions there can be in a euchre game.
 
     const GameError = error {
         ActionNotLegalGivenGameState,
@@ -63,12 +61,9 @@ pub const Game = struct {
         GameIsOver,
     };
 
-    /// Creates a game object. It is NOT ready to be played.
-    /// 
-    /// Caller is responsible for cleaning up game's memory with `deinit`
+    /// Creates a game object ready to be played.
     pub fn new(config: GameConfig) !Game {
-
-        return Game {
+        var game = Game {
             .config = config,
             .prng = std.Random.DefaultPrng.init(blk: {
                 var seed: u64 = undefined;
@@ -77,8 +72,6 @@ pub const Game = struct {
                 } else {seed = config.seed.?;}
                 break :blk seed;
             }),
-            .was_initialized = false,
-            .is_over = false,
             .scores = null,
 
             .deck = Deck.new(),
@@ -99,6 +92,8 @@ pub const Game = struct {
 
             .turns_taken = TurnsTaken.new(),
         };
+        try game.reset();
+        return game;
 
     }
 
@@ -114,11 +109,9 @@ pub const Game = struct {
                 break :blk seed;
         });
 
-        self.was_initialized = true;
-
-        self.is_over = false;
         self.scores = null;
 
+        self.deck = Deck.new();
         Deck.fillUnshuffled(&self.deck.card_buffer);
         self.prng.random().shuffle(Card, &self.deck.card_buffer);
 
@@ -188,6 +181,10 @@ pub const Game = struct {
         return p_id -% offset;
     }
 
+    pub fn is_over(self: *const Game) bool {
+        return self.players[self.curr_player_id].cards_left() == 0;
+    }
+
     // //////
     // / Game Logic
     // /////
@@ -196,7 +193,7 @@ pub const Game = struct {
     /// 
     /// Will return errors if the action is not allowed in this state, or the game is over.
     pub fn step(self: *Game, action: Action) GameError!struct {PlayerId, ScopedState} {
-        if (self.is_over) return GameError.GameIsOver;
+        if (self.is_over()) return GameError.GameIsOver;
 
         // impossible if player is curr_player and their partner called it alone, unless they are the dealer to discard
         if (self.called_alone != null and self.called_alone.? and self.dealer_id != self.curr_player_id) 
@@ -226,7 +223,6 @@ pub const Game = struct {
 
     /// Remove the affects of the last action taken in the game.
     pub fn step_back(self: *Game) GameError!struct {PlayerId, ScopedState} {
-        if (self.is_over) self.is_over = false;
 
         const the_last_turn = self.last_action();
         if (the_last_turn == null) return GameError.GameHasNotStarted;
@@ -252,7 +248,7 @@ pub const Game = struct {
     /// The array is 7 long because at most a player can have 7 choices at once, never more.
     pub fn get_legal_actions(self: *const Game) LegalActions {
         var result: LegalActions = LegalActions.new();
-        if (self.is_over) return result;
+        if (self.is_over()) return result;
 
         const active_player = &self.players[self.curr_player_id];
 
@@ -456,8 +452,7 @@ pub const Game = struct {
             // set next player to the winner, even if game is over now
             self.curr_player_id = winner_id;
             // the winner having no more cards implies no one has cards
-            if (self.players[self.curr_player_id].cards_left() == 0) {
-                self.is_over = true;
+            if (self.is_over()) {
                 self.scores = self.score_round();
             }
         } else {
@@ -478,8 +473,7 @@ pub const Game = struct {
             const num_turns = self.turns_taken.num_left();
             std.debug.assert((num_turns > 5 and ! self.called_alone.?) or (num_turns > 4 and self.called_alone.?));
 
-            if (self.players[self.curr_player_id].cards_left() == 0) {
-                self.is_over = false;
+            if (self.is_over()) {
                 self.scores = null;
             }
             // current player is the winner of this trick, so make it the person who played the card
@@ -583,25 +577,23 @@ pub const Game = struct {
 
 
 pub const ScopedState = struct {
-    dealer_actor: PlayerId,
-    current_actor: PlayerId,
-    hand: Player.Hand,
+    turns_taken: TurnsTaken,
+    legal_actions: LegalActions,
 
-    calling_actor: ?PlayerId,
-    called_alone: ?bool,
-    flipped_choice: ?FlippedChoice,
+    hand: Player.Hand,
+    center: CenterCards,
     flipped_card: Card,
 
-    trump: ?Suit,
-
-    led_suit: ?Suit,
-
     order: [4]PlayerId,
-    center: CenterCards,
+    calling_actor: ?PlayerId,
 
-    turns_taken: TurnsTaken,
+    dealer_actor: PlayerId,
+    current_actor: PlayerId,
 
-    legal_actions: LegalActions,
+    trump: ?Suit,
+    led_suit: ?Suit,
+    flipped_choice: ?FlippedChoice,
+    called_alone: ?bool,
 };
 
 
@@ -609,16 +601,15 @@ test "create_game" {
     const expect = std.testing.expect;
 
     var game = try Game.new(.{ .verbose = false, .seed = 42});
-    try game.reset();
-    try expect(game.is_over == false);
+    try expect(game.is_over() == false);
 
     for (0..29) |_| {
-        if (game.is_over == true) break;
+        if (game.is_over() == true) break;
         const acts = game.get_legal_actions();
         _ = try game.step(acts.get(0).?);
         // std.debug.print("{any}\n", .{acts});
     }
-    try expect(game.is_over == true);
+    try expect(game.is_over() == true);
 
 }
 
@@ -637,16 +628,15 @@ test "play 10,000 games randomly" {
 
     for (0..num_games) |_| {
         var game = try Game.new(.{ .verbose = false});
-        try game.reset();
         for (0..29) |_| {
-            if (game.is_over == true) break;
+            if (game.is_over() == true) break;
 
             const acts = game.get_legal_actions();
             const act = acts.get(prng.random().intRangeAtMost(usize, 1, acts.num_left())-1);
         
             _ = try game.step(act.?);
         }
-        try expect(game.is_over == true);
+        try expect(game.is_over() == true);
 
         // step back through the whole game
         while (true) {
