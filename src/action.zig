@@ -1,4 +1,4 @@
-// Each action that can be taken in the game is represented by a number.  
+// Each action that can be taken in the game is represented by a number.
 // This explicitness lends itself well if this code were to be utilized to write bots
 // or potentially deep learning algorithms
 
@@ -9,7 +9,6 @@ const Suit = @import("card/suit.zig").Suit;
 const Rank = @import("card/rank.zig").Rank;
 
 pub const Action = enum(u6) {
-
     const total_actions = 59; // do not change
 
     // Play actions
@@ -25,13 +24,21 @@ pub const Action = enum(u6) {
     DiscardC9, DiscardCT, DiscardCJ, DiscardCQ, DiscardCK, DiscardCA,
 
     // although not necessary, this order matches that of `Suit.Range()`
-    CallSpades, CallHearts, CallDiamonds, CallClubs, 
+    CallSpades,
+    CallHearts,
+    CallDiamonds,
+    CallClubs,
 
     // Go Alone
-    CallSpadesAlone, CallHeartsAlone, CallDiamondsAlone, CallClubsAlone, 
+    CallSpadesAlone,
+    CallHeartsAlone,
+    CallDiamondsAlone,
+    CallClubsAlone,
 
     // Whether to call or pass on the flipped card
-    Pick, PickAlone, Pass,
+    Pick,
+    PickAlone,
+    Pass,
 
     pub const ActionError = error{
         IntOutOfRange,
@@ -55,7 +62,7 @@ pub const Action = enum(u6) {
         return ActionError.StrNotConvertable;
     }
 
-    pub fn FromCard(card: Card, to_play: bool ) Action {
+    pub fn FromCard(card: Card, to_play: bool) Action {
         const suit_num: u6 = @as(u6, @intFromEnum(card.suit));
         const rank_num: u6 = @intFromEnum(card.rank) - 9;
         const discard_offset: u6 = if (to_play == true) 0 else 24;
@@ -69,19 +76,14 @@ pub const Action = enum(u6) {
         const rank_num = (num % 6) + 9;
         const suit_num = (num % 24) / 6;
 
-        return Card{.suit = @enumFromInt(suit_num), .rank = @enumFromInt(rank_num)};
+        return Card{ .suit = @enumFromInt(suit_num), .rank = @enumFromInt(rank_num) };
     }
-
 };
-
 
 pub const FlippedChoice = enum(u1) {
     PickedUp,
     TurnedDown,
 };
-
-
-
 
 test "action_from_str" {
     const expect = std.testing.expect;

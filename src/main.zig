@@ -11,7 +11,6 @@ const Game = lib.Game;
 const stdout_file = std.io.getStdOut().writer();
 
 pub fn main() !void {
-
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
 
@@ -19,7 +18,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     const num_games = 1_000_000;
-    
+
     try stdout.print("Starting {d} games of Euchre.\n", .{num_games});
     try bw.flush();
 
@@ -44,9 +43,9 @@ pub fn main() !void {
     // std.debug.print("Vars: {s}\n", .{vars.get("PATH").?});
 
     const elapsed_ns = (try std.time.Instant.now()).since(start);
-    const elapsed_ms = elapsed_ns/std.time.ns_per_ms;
-    const elapsed_s = elapsed_ns/std.time.ns_per_s;
+    const elapsed_ms = elapsed_ns / std.time.ns_per_ms;
+    const elapsed_s = elapsed_ns / std.time.ns_per_s;
 
-    try stdout.print("Duration: {}s {}ms\n", .{elapsed_s, elapsed_ms % std.time.ms_per_s});
+    try stdout.print("Duration: {}s {}ms\n", .{ elapsed_s, elapsed_ms % std.time.ms_per_s });
     try bw.flush(); // Don't forget to flush!
 }

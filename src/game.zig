@@ -1,4 +1,4 @@
-// The `Game` struct contains logic and exposes API's to run a game of euchre.  
+// The `Game` struct contains logic and exposes API's to run a game of euchre.
 // While Euchre is a 4 player game, the API exposes a simple `step` function.
 
 const std = @import("std");
@@ -13,7 +13,7 @@ pub const PlayerId: type = @import("player.zig").PlayerId;
 pub const FlippedChoice = @import("action.zig").FlippedChoice;
 const NullSentinelArray = @import("nullarray.zig").NullSentinelArray;
 
-pub const Turn: type = struct{PlayerId,Action};
+pub const Turn: type = struct { PlayerId, Action };
 pub const TurnsTaken: type = NullSentinelArray(Turn, 29);
 pub const LegalActions: type = NullSentinelArray(Action, 7);
 pub const CenterCards: type = NullSentinelArray(Card, 4);
@@ -32,7 +32,6 @@ pub const Game = struct {
     const empty_center: CenterCards = CenterCards.new();
     const Winners: type = NullSentinelArray(PlayerId, 5);
 
-    
     prng: std.Random.DefaultPrng,
     turns_taken: TurnsTaken, // maximum number of actions there can be in a euchre game.
 
@@ -54,8 +53,7 @@ pub const Game = struct {
     called_alone: ?bool,
     flipped_choice: ?FlippedChoice,
 
-
-    const GameError = error {
+    const GameError = error{
         ActionNotLegalGivenGameState,
         GameHasNotStarted,
         GameIsOver,
@@ -63,13 +61,15 @@ pub const Game = struct {
 
     /// Creates a game object ready to be played.
     pub fn new(config: GameConfig) !Game {
-        var game = Game {
+        var game = Game{
             .config = config,
             .prng = std.Random.DefaultPrng.init(blk: {
                 var seed: u64 = undefined;
                 if (config.seed == null) {
                     try std.posix.getrandom(std.mem.asBytes(&seed));
-                } else {seed = config.seed.?;}
+                } else {
+                    seed = config.seed.?;
+                }
                 break :blk seed;
             }),
             .scores = null,
@@ -94,19 +94,20 @@ pub const Game = struct {
         };
         try game.reset();
         return game;
-
     }
 
     /// Resets the game state to a valid beginning state.
-    /// 
+    ///
     /// Reuses the config passed in when `new` was called.
     pub fn reset(self: *Game) !void {
         self.prng = std.Random.DefaultPrng.init(blk: {
-                var seed: u64 = undefined;
-                if (self.config.seed == null) {
-                    try std.posix.getrandom(std.mem.asBytes(&seed));
-                } else {seed = self.config.seed.?;}
-                break :blk seed;
+            var seed: u64 = undefined;
+            if (self.config.seed == null) {
+                try std.posix.getrandom(std.mem.asBytes(&seed));
+            } else {
+                seed = self.config.seed.?;
+            }
+            break :blk seed;
         });
 
         self.scores = null;
@@ -143,9 +144,9 @@ pub const Game = struct {
             std.debug.assert(p_id != self.caller_id.? +% 2);
             const second_to_go = self.player_after(p_id);
             const third_to_go = self.player_after(second_to_go);
-            return .{p_id, second_to_go, third_to_go, self.caller_id.? +% 2};
+            return .{ p_id, second_to_go, third_to_go, self.caller_id.? +% 2 };
         }
-        return .{p_id, p_id +% 1, p_id +% 2, p_id +% 3};
+        return .{ p_id, p_id +% 1, p_id +% 2, p_id +% 3 };
     }
 
     /// Returns the effective suit of the game
@@ -155,7 +156,7 @@ pub const Game = struct {
 
         const led_card = self.center.get(0).?;
         if (led_card.isLeftBower(self.trump.?)) {
-                return self.trump;
+            return self.trump;
         }
         return led_card.suit;
     }
@@ -164,7 +165,7 @@ pub const Game = struct {
     fn last_action(self: *const Game) ?Turn {
         const acts_taken = self.turns_taken.num_left();
         if (acts_taken == 0) return null;
-        return self.turns_taken.get(acts_taken-1);
+        return self.turns_taken.get(acts_taken - 1);
     }
 
     /// Returns the id of the next player, making considerations for a game where someone chose to go alone.
@@ -190,13 +191,13 @@ pub const Game = struct {
     // /////
 
     /// Take `action` and change the game state to reflect that.
-    /// 
+    ///
     /// Will return errors if the action is not allowed in this state, or the game is over.
-    pub fn step(self: *Game, action: Action) GameError!struct {PlayerId, ScopedState} {
+    pub fn step(self: *Game, action: Action) GameError!struct { PlayerId, ScopedState } {
         if (self.is_over()) return GameError.GameIsOver;
 
         // impossible if player is curr_player and their partner called it alone, unless they are the dealer to discard
-        if (self.called_alone != null and self.called_alone.? and self.dealer_id != self.curr_player_id) 
+        if (self.called_alone != null and self.called_alone.? and self.dealer_id != self.curr_player_id)
             std.debug.assert(self.curr_player_id != self.caller_id.? +% 2);
 
         const legal_acts = self.get_legal_actions();
@@ -205,25 +206,24 @@ pub const Game = struct {
 
         if (!legal) return GameError.ActionNotLegalGivenGameState;
 
-        switch (@intFromEnum(action) ) {
+        switch (@intFromEnum(action)) {
             @intFromEnum(Action.Pick)...@intFromEnum(Action.PickAlone) => self.perform_pick_action(action),
             @intFromEnum(Action.Pass) => self.perform_pass_action(),
-            @intFromEnum(Action.CallSpades)...@intFromEnum(Action.CallClubsAlone)=> self.perform_call_action(action),
+            @intFromEnum(Action.CallSpades)...@intFromEnum(Action.CallClubsAlone) => self.perform_call_action(action),
             @intFromEnum(Action.PlayS9)...@intFromEnum(Action.PlayCA) => self.perform_play_action(action),
             @intFromEnum(Action.DiscardS9)...@intFromEnum(Action.DiscardCA) => self.perform_discard_action(action),
             else => unreachable,
         }
 
         // Record that I have taken this action. above code (get_legal_actions) gurantees this will work.
-        self.turns_taken.push(.{old_player, action}) catch unreachable;
+        self.turns_taken.push(.{ old_player, action }) catch unreachable;
 
         // std.debug.print(" {d}\n", .{self.curr_player_id});
-        return .{self.curr_player_id, self.get_scoped_state()};
+        return .{ self.curr_player_id, self.get_scoped_state() };
     }
 
     /// Remove the affects of the last action taken in the game.
-    pub fn step_back(self: *Game) GameError!struct {PlayerId, ScopedState} {
-
+    pub fn step_back(self: *Game) GameError!struct { PlayerId, ScopedState } {
         const the_last_turn = self.last_action();
         if (the_last_turn == null) return GameError.GameHasNotStarted;
 
@@ -241,10 +241,10 @@ pub const Game = struct {
         // remove the action
         _ = self.turns_taken.pop();
 
-        return .{self.curr_player_id, self.get_scoped_state()};
+        return .{ self.curr_player_id, self.get_scoped_state() };
     }
 
-    /// Returns an array of size 7 containing all possible actions a player can take.  
+    /// Returns an array of size 7 containing all possible actions a player can take.
     /// The array is 7 long because at most a player can have 7 choices at once, never more.
     pub fn get_legal_actions(self: *const Game) LegalActions {
         var result: LegalActions = LegalActions.new();
@@ -257,15 +257,13 @@ pub const Game = struct {
         if (active_player.cards_left() == 6) { // dealer must discad
             // exit control flow, will translate whole hand into result for discard action at bottom.
             play_hand = false;
-
         } else if (self.trump == null) { // deciding trump
 
             if (self.flipped_choice == null) { // flipped card available
-    
+
                 result.push(Action.Pick) catch unreachable;
                 result.push(Action.PickAlone) catch unreachable;
                 result.push(Action.Pass) catch unreachable;
-
             } else { // else flipped_choice is TurnedDown, because PickedUp would set trump. All but dealer can pass
 
                 result.push(Action.CallSpades) catch unreachable;
@@ -273,7 +271,7 @@ pub const Game = struct {
                 result.push(Action.CallDiamonds) catch unreachable;
                 result.push(Action.CallClubs) catch unreachable;
                 // works because I pushed into `result` using same order as Suit.range
-                result.remove_ind( @intFromEnum(self.flipped_card.suit) ) catch unreachable;
+                result.remove_ind(@intFromEnum(self.flipped_card.suit)) catch unreachable;
 
                 result.push(Action.CallSpadesAlone) catch unreachable;
                 result.push(Action.CallHeartsAlone) catch unreachable;
@@ -283,13 +281,12 @@ pub const Game = struct {
                 // need u3 conversion since suit is of u2. 2 added since 0 based indexing
                 result.remove_ind(2 + @as(u3, @intFromEnum(self.flipped_card.suit))) catch unreachable;
 
-                result.push( if (self.curr_player_id == self.dealer_id) null else Action.Pass ) catch unreachable;
+                result.push(if (self.curr_player_id == self.dealer_id) null else Action.Pass) catch unreachable;
             }
 
             return result;
-
-        } else if (self.get_led_suit() == null) { 
-            // can play any card, exit control flow 
+        } else if (self.get_led_suit() == null) {
+            // can play any card, exit control flow
 
         } else { // either must follow suit, or play any card
             const led_suit = self.get_led_suit().?;
@@ -298,7 +295,7 @@ pub const Game = struct {
                 const curr_card = active_player.hand.get(ind).?;
 
                 const is_left: bool = curr_card.isLeftBower(self.trump.?);
-                const is_led_suit: bool = curr_card.suit.eq(led_suit);
+                const is_led_suit: bool = curr_card.suit == led_suit;
                 if ((!is_left and is_led_suit) or (is_left and self.trump == led_suit)) {
                     result.push(Action.FromCard(curr_card, true)) catch unreachable;
                 }
@@ -308,11 +305,11 @@ pub const Game = struct {
             // exit control flow, can play any card
         }
 
-        // Here only if I can't follow suit, or I am leading, or I may discard any card in my hand. 
+        // Here only if I can't follow suit, or I am leading, or I may discard any card in my hand.
         // Either way I will go through my whole hand.
         for (0..6) |ind| {
             const curr_card = active_player.hand.get(ind);
-            result.push( if (curr_card == null) null else Action.FromCard(curr_card.?, play_hand) ) catch unreachable;
+            result.push(if (curr_card == null) null else Action.FromCard(curr_card.?, play_hand)) catch unreachable;
         }
 
         return result;
@@ -339,7 +336,7 @@ pub const Game = struct {
 
             .turns_taken = self.turns_taken,
 
-            .legal_actions= self.get_legal_actions(),
+            .legal_actions = self.get_legal_actions(),
         };
         return scoped_state;
     }
@@ -371,7 +368,6 @@ pub const Game = struct {
         self.called_alone = null;
     }
 
-
     /// Changes to game state:
     /// 1. if dealer, set flipped choice to turned down
     /// 2. player is incremented by 1 wrapping
@@ -389,7 +385,6 @@ pub const Game = struct {
         if (self.curr_player_id == self.dealer_id)
             self.flipped_choice = null;
     }
-
 
     /// Changes to game state:
     /// 1. Trump set to suit of flipped card
@@ -419,12 +414,11 @@ pub const Game = struct {
         self.order = self.order_starting_from(self.dealer_id +% 1);
     }
 
-
     /// Changes the game state:
     /// 1. removes played card from players hand
     /// 2. adds played card to center
     /// 3. Handles trick end logic OR sets current player to player on the left (+1 wrapping)
-    /// 
+    ///
     /// Trick end logic:
     ///     1. Determine winner and add winner to `previous_winner` stack. Award them a trick
     ///     2. Save that the current player (who ended trick) as the previous last trick ender
@@ -444,7 +438,6 @@ pub const Game = struct {
             const winner_id = self.judge_trick();
             self.previous_winners.push(winner_id) catch unreachable;
             self.players[winner_id].award_trick();
-
 
             self.order = self.order_starting_from(winner_id);
             self.center = empty_center;
@@ -471,14 +464,14 @@ pub const Game = struct {
             // if no one calls, it takes at least 6 turns to get to a trick end (pick, discard, 4 plays)
             // else it takes at least 5 (pick, discard, 3 plays)
             const num_turns = self.turns_taken.num_left();
-            std.debug.assert((num_turns > 5 and ! self.called_alone.?) or (num_turns > 4 and self.called_alone.?));
+            std.debug.assert((num_turns > 5 and !self.called_alone.?) or (num_turns > 4 and self.called_alone.?));
 
             if (self.is_over()) {
                 self.scores = null;
             }
             // current player is the winner of this trick, so make it the person who played the card
             // that ended this trick
-            self.curr_player_id = self.turns_taken.get(num_turns-1).?[0];
+            self.curr_player_id = self.turns_taken.get(num_turns - 1).?[0];
 
             // number 2 and number 3 in this loop
             const called_alone_offset: usize = if (self.called_alone != null and self.called_alone.?) 3 else 4;
@@ -495,7 +488,6 @@ pub const Game = struct {
             // current player right now was the winner
             const old_winner = self.previous_winners.pop().?;
             self.players[old_winner].take_away_trick() catch unreachable;
-
         } else {
             std.debug.assert(self.center.num_left() < 4 and self.center.num_left() > 0);
             self.curr_player_id = self.player_before(self.curr_player_id);
@@ -504,7 +496,6 @@ pub const Game = struct {
         _ = self.center.pop();
         self.players[self.curr_player_id].put_card_back_in_hand(card) catch unreachable;
     }
-
 
     /// Changes the game state:
     /// 1. remove specified card from dealers hand
@@ -527,8 +518,8 @@ pub const Game = struct {
     }
 
     /// Returns the player_id of the winner.
-    /// 
-    /// Asserts the game is in a state where center has 4 cards or 3 cards if someone called alone.  
+    ///
+    /// Asserts the game is in a state where center has 4 cards or 3 cards if someone called alone.
     /// Leverages that indices of cards in center match the id of who played them in `self.order`
     fn judge_trick(self: *Game) PlayerId {
         std.debug.assert(self.called_alone != null);
@@ -537,7 +528,7 @@ pub const Game = struct {
         var best_player: PlayerId = self.order[0];
         var best_card: Card = self.center.get(0).?;
 
-        const end_considering_going_alone: usize = if(self.called_alone.?) 3 else 4;
+        const end_considering_going_alone: usize = if (self.called_alone.?) 3 else 4;
         for (1..end_considering_going_alone) |ind| {
             const card_comparison = self.center.get(ind).?.gt(best_card, self.trump.?);
             if (card_comparison != null and card_comparison.?) {
@@ -550,7 +541,6 @@ pub const Game = struct {
         return best_player;
     }
 
-
     /// At the end of the game, determine the scores based on the 5 tricks
     fn score_round(self: *Game) [4]u3 {
         std.debug.assert(self.called_alone != null);
@@ -559,22 +549,20 @@ pub const Game = struct {
         const team_1_went_alone: bool = self.called_alone.? and team_1_called;
 
         if (team_1_tricks == 5) { // team 1 swept
-            if (team_1_went_alone) return .{4, 0, 4, 0};
-            return .{2, 0, 2, 0};
+            if (team_1_went_alone) return .{ 4, 0, 4, 0 };
+            return .{ 2, 0, 2, 0 };
         } else if (team_1_tricks >= 3) {
-            if (team_1_called) return .{1, 0, 1, 0}; // team 1 won and called. no sweep
-            return .{2, 0, 2, 0}; // team 1 euchred team 2
+            if (team_1_called) return .{ 1, 0, 1, 0 }; // team 1 won and called. no sweep
+            return .{ 2, 0, 2, 0 }; // team 1 euchred team 2
         } else if (team_1_tricks > 0) {
-            if (team_1_called) return .{0, 2, 0, 2}; // team 2 euchred team 1
-            return .{0, 1, 0, 1}; // team 2 won and called. no sweep
+            if (team_1_called) return .{ 0, 2, 0, 2 }; // team 2 euchred team 1
+            return .{ 0, 1, 0, 1 }; // team 2 won and called. no sweep
         } else { // team 2 swept
-            if (!team_1_went_alone) return .{0, 4, 0, 4};
-            return .{0, 2, 0, 2};
+            if (!team_1_went_alone) return .{ 0, 4, 0, 4 };
+            return .{ 0, 2, 0, 2 };
         }
     }
-
 };
-
 
 pub const ScopedState = struct {
     turns_taken: TurnsTaken,
@@ -596,11 +584,10 @@ pub const ScopedState = struct {
     called_alone: ?bool,
 };
 
-
 test "create_game" {
     const expect = std.testing.expect;
 
-    var game = try Game.new(.{ .verbose = false, .seed = 42});
+    var game = try Game.new(.{ .verbose = false, .seed = 42 });
     try expect(game.is_over() == false);
 
     for (0..29) |_| {
@@ -610,9 +597,7 @@ test "create_game" {
         // std.debug.print("{any}\n", .{acts});
     }
     try expect(game.is_over() == true);
-
 }
-
 
 test "play 10,000 games randomly" {
     const expect = std.testing.expect;
@@ -621,27 +606,27 @@ test "play 10,000 games randomly" {
     const num_games = 10_000;
 
     var prng = std.Random.DefaultPrng.init(blk: {
-                var seed: u64 = undefined;
-                try std.posix.getrandom(std.mem.asBytes(&seed));
-                break :blk seed;
+        var seed: u64 = undefined;
+        try std.posix.getrandom(std.mem.asBytes(&seed));
+        break :blk seed;
     });
 
     for (0..num_games) |_| {
-        var game = try Game.new(.{ .verbose = false});
+        var game = try Game.new(.{ .verbose = false });
         for (0..29) |_| {
             if (game.is_over() == true) break;
 
             const acts = game.get_legal_actions();
-            const act = acts.get(prng.random().intRangeAtMost(usize, 1, acts.num_left())-1);
-        
+            const act = acts.get(prng.random().intRangeAtMost(usize, 1, acts.num_left()) - 1);
+
             _ = try game.step(act.?);
         }
         try expect(game.is_over() == true);
 
         // step back through the whole game
         while (true) {
-           const turn = game.step_back() catch break;
-           _ = turn;
+            const turn = game.step_back() catch break;
+            _ = turn;
         }
     }
 }
