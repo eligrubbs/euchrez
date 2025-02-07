@@ -1,4 +1,3 @@
-
 const std = @import("std");
 
 pub fn NullSentinelArray(comptime T: type, len: usize) type {
@@ -14,7 +13,8 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
         };
 
         pub fn new() Self {
-            return Self{.data = .{null} ** len,
+            return Self{
+                .data = .{null} ** len,
             };
         }
 
@@ -39,8 +39,8 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
         pub fn pop(self: *Self) ?T {
             const n_left = self.num_left();
             if (n_left == 0) return null;
-            const old: ?T = self.data[n_left-1];
-            self.data[n_left-1] = null;
+            const old: ?T = self.data[n_left - 1];
+            self.data[n_left - 1] = null;
             return old;
         }
 
@@ -63,16 +63,16 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
         pub fn remove_ind(self: *Self, ind: usize) ArrayError!void {
             if (ind >= len) return ArrayError.IndexOutOfBounds;
             self.data[ind] = null;
-            for ((ind+1)..len) |indd| {
+            for ((ind + 1)..len) |indd| {
                 if (self.data[indd] == null) break;
-                self.data[indd-1] = self.data[indd];
+                self.data[indd - 1] = self.data[indd];
                 self.data[indd] = null;
             }
         }
 
         /// Returns the index of `item` in the array or `ItemNotPresent` if it can't be found
         pub fn find(self: *const Self, item: T) ArrayError!usize {
-            for(0..len) |ind| {
+            for (0..len) |ind| {
                 if (self.data[ind] != null and std.meta.eql(self.data[ind].?, item)) {
                     return ind;
                 }
@@ -80,15 +80,11 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
             return ArrayError.ItemNotPresent;
         }
     };
-
 }
-
 
 test "u8 array" {
     const expect = @import("std").testing.expect;
 
     var bob = NullSentinelArray(u8, 5).new();
     try expect(bob.num_left() == 0);
-
-
 }

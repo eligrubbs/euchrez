@@ -72,8 +72,6 @@ pub const Deck = struct {
     }
 };
 
-
-
 test "create_unshuffled" {
     const expect = std.testing.expect;
 

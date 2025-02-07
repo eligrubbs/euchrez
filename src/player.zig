@@ -1,4 +1,3 @@
-
 const Card = @import("card/card.zig").Card;
 const NullSentinelArray = @import("nullarray.zig").NullSentinelArray;
 
@@ -11,7 +10,7 @@ pub const Player = struct {
     tricks: u3,
     hand: Hand,
 
-    pub const PlayerError = error {
+    pub const PlayerError = error{
         HandNot5Cards,
         HandFull,
         CardNotPresent,
@@ -27,9 +26,9 @@ pub const Player = struct {
         if (hand.len != 5) return PlayerError.HandNot5Cards;
 
         // we know this will work because of the above check
-        for (0..5) | ind| p_hand.push(hand[ind]) catch {};
+        for (0..5) |ind| p_hand.push(hand[ind]) catch {};
 
-        return Player {
+        return Player{
             .id = p_id,
             .tricks = 0,
             .hand = p_hand,
@@ -52,10 +51,10 @@ pub const Player = struct {
     }
 
     /// Removes a card from the players hand.
-    /// 
+    ///
     /// Shifts all cards to the right of that spot over.
     pub fn discard_card(self: *Player, card: Card) PlayerError!void {
-        self.hand.remove(card) catch return PlayerError.CardNotPresent;   
+        self.hand.remove(card) catch return PlayerError.CardNotPresent;
     }
 
     pub fn get_id(self: *const Player) PlayerId {
@@ -76,7 +75,6 @@ pub const Player = struct {
     }
 };
 
-
 const std = @import("std");
 const expect = std.testing.expect;
 
@@ -91,7 +89,7 @@ test "create_player" {
     try expect(player.id == 0);
     try expect(player.cards_left() == 5);
     try expect(player.hand.get(5) == null);
-    try expect(player.hand.get(0).?.eq(try Card.FromStr("S9") ));
+    try expect(player.hand.get(0).?.eq(try Card.FromStr("S9")));
 
     // Testing that the players hand has copy of those in the deck
     const new_card = try Card.FromStr("HT");
@@ -122,5 +120,4 @@ test "player_picks_up_and_discards" {
     try player.discard_card(player.hand.get(0).?);
     try expect(player.cards_left() == 4);
     try expect(player.hand.get(0).?.eq(deck.card_buffer[1]));
-
 }

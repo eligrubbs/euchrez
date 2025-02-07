@@ -3,28 +3,25 @@
 const Suit = @import("suit.zig").Suit;
 const Rank = @import("rank.zig").Rank;
 
-
 pub const Card = struct {
     suit: Suit,
     rank: Rank,
 
-    
-    pub const CardError = error{InvalidSuitChar, InvalidRankChar};
+    pub const CardError = error{ InvalidSuitChar, InvalidRankChar };
 
     pub fn str(self: Card) [2]u8 {
-        return [2]u8{self.suit.char(), self.rank.char()};
+        return [2]u8{ self.suit.char(), self.rank.char() };
     }
 
     pub fn FromStr(string: *const [2]u8) CardError!Card {
-        
         const suit = Suit.FromChar(string[0]) catch return CardError.InvalidSuitChar;
         const rank = Rank.FromChar(string[1]) catch return CardError.InvalidRankChar;
 
-        return Card{.suit = suit, .rank = rank};
+        return Card{ .suit = suit, .rank = rank };
     }
 
     pub fn eq(self: *const Card, other: Card) bool {
-        return (self.suit.eq(other.suit) and self.rank.eq(other.rank));
+        return (self.suit == other.suit and self.rank == other.rank);
     }
 
     /// Returns true if this card is greater than `other`.
@@ -70,17 +67,14 @@ pub const Card = struct {
     pub fn isTrump(self: Card, trump: Suit) bool {
         return self.suit == trump or self.isLeftBower(trump);
     }
-
 };
-
-
 
 test "print_card" {
     const expect = @import("std").testing.expect;
     const mem_eq = @import("std").mem.eql;
 
-    const card = Card{.suit=Suit.Spades, .rank=Rank.Ten};
-    try expect(mem_eq(u8, &card.str(), "ST") );
+    const card = Card{ .suit = Suit.Spades, .rank = Rank.Ten };
+    try expect(mem_eq(u8, &card.str(), "ST"));
 }
 
 test "from_string" {
@@ -88,7 +82,7 @@ test "from_string" {
 
     var str_repr = "SA";
     const card = try Card.FromStr(str_repr);
-    var truth = Card{.suit = Suit.Spades, .rank = Rank.Ace};
+    var truth = Card{ .suit = Suit.Spades, .rank = Rank.Ace };
 
     try expect(truth.eq(card));
 
@@ -116,7 +110,7 @@ test "is_left" {
     try expect(card.isLeftBower(trump));
     card = try Card.FromStr("SJ");
     try expect(!card.isLeftBower(trump));
-    
+
     trump = Suit.Diamonds;
     card = try Card.FromStr("DJ");
     try expect(!card.isLeftBower(trump));
@@ -124,7 +118,6 @@ test "is_left" {
     try expect(!card.isLeftBower(trump));
     card = try Card.FromStr("HJ");
     try expect(card.isLeftBower(trump));
-
 }
 
 test "cards_greater_than" {
@@ -171,7 +164,7 @@ test "cards_greater_than" {
     card2 = try Card.FromStr("HJ");
     try expect(!card1.gt(card2, trump).?);
     try expect(card2.gt(card1, trump).?);
-    
+
     card1 = try Card.FromStr("CA");
     try expect(!card1.gt(card2, trump).?);
     try expect(card2.gt(card1, trump).?);
