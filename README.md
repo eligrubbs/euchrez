@@ -1,10 +1,15 @@
-# euchre-zig
-Implementation of Euchre in Zig
+# euchrez
+Implementation of Euchre in Zig.
+
+Meant to be used as a library in your program to play euchre games.
+
+The `Game` type is intended only to move the game forward/backward. 
+An interface for loading each of the 4 players as unique agents has not been created yet.
 
 
 ### Benchmarks:
 
-When built with `-Doptimize=ReleaseFast`:
+When built with `-Drelease=true`:
 
 |    Games   | Time to play (sec, ms) |
 |  --------  |  ----------------  |

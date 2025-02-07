@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const lib = b.addStaticLibrary(.{
-        .name = "TheEuchreLib",
+        .name = "eucherz",
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
@@ -41,12 +41,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe_mod.addImport("euchrez_lib", lib_mod);
+    exe_mod.addImport("euchrez", lib_mod);
 
     // This creates another `std.Build.Step.Compile`, but this one builds an executable
     // rather than a static library.
     const exe = b.addExecutable(.{
-        .name = "euchreExe",
+        .name = "euchrezExe",
         .root_module = exe_mod,
     });
     b.installArtifact(exe);
