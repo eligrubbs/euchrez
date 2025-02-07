@@ -1,8 +1,11 @@
+
 const Card = @import("card/card.zig").Card;
 const NullSentinelArray = @import("nullarray.zig").NullSentinelArray;
 
 pub const PlayerId: type = u2;
 
+
+/// Internal player type used by `Game` type.
 pub const Player = struct {
     pub const Hand = NullSentinelArray(Card, 6);
 
