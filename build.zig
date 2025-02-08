@@ -8,17 +8,17 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib_mod = b.createModule(.{
+    // Public package
+    const lib_mod = b.addModule("euchrez", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
 
+    // Documentation
     const lib = b.addStaticLibrary(.{
         .name = "euchrez",
-        .root_source_file = b.path("src/root.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
     });
 
     b.installArtifact(lib);
@@ -32,23 +32,15 @@ pub fn build(b: *std.Build) void {
     const docs_step = b.step("docs", "Install docs into zig-out/docs");
     docs_step.dependOn(&install_docs.step);
 
-
-
-    // We will also create a module for our other entry point, 'main.zig'.
-    const exe_mod = b.createModule(.{
+    // Internal executable
+    const exe = b.addExecutable(.{
+        .name = "euchrezExe",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
+    exe.root_module.addImport("euchrezInternal", lib_mod);
 
-    exe_mod.addImport("euchrez", lib_mod);
-
-    // This creates another `std.Build.Step.Compile`, but this one builds an executable
-    // rather than a static library.
-    const exe = b.addExecutable(.{
-        .name = "euchrezExe",
-        .root_module = exe_mod,
-    });
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

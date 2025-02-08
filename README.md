@@ -9,7 +9,7 @@ An interface for loading each of the 4 players as unique agents has not been cre
 
 ### Benchmarks:
 
-When built with `-Drelease=true`:
+When built with `-Doptimize=ReleaseFast`:
 
 |    Games   | Time to play (sec, ms) |
 |  --------  |  ----------------  |

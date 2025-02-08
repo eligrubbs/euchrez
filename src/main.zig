@@ -5,7 +5,7 @@
 const std = @import("std");
 
 /// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
-const lib = @import("euchrez");
+const lib = @import("euchrezInternal");
 const Game = lib.Game;
 
 const stdout_file = std.io.getStdOut().writer();
