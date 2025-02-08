@@ -1,0 +1,19 @@
+.{
+    .name = "example",
+
+    .version = "0.0.0",
+
+    .dependencies = .{
+        .euchrezZon = .{
+            .url = "https://github.com/eligrubbs/euchrez/archive/a3b98c35938aa8b60a1161cd2e0f418493e05bf5.tar.gz",
+
+            .hash = "1220481b0aafff6ff35aab33c3a49311fd494e73ec2dca0a7e920f8b0749db2972f5",
+        },
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
