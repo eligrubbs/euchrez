@@ -218,11 +218,10 @@ pub const Game = struct {
         // Record that I have taken this action. above code (get_legal_actions) gurantees this will work.
         self.turns_taken.push(.{ old_player, action }) catch unreachable;
 
-        // std.debug.print(" {d}\n", .{self.curr_player_id});
-        return .{ self.curr_player_id, self.get_scoped_state() };
+        return .{ self.curr_player_id, self.get_scoped_state(self.curr_player_id) };
     }
 
-    /// Remove the affects of the last action taken in the game.
+    /// Remove the effects of the last action taken in the game.
     pub fn step_back(self: *Game) GameError!struct { PlayerId, ScopedState } {
         const the_last_turn = self.last_action();
         if (the_last_turn == null) return GameError.GameHasNotStarted;
@@ -241,7 +240,7 @@ pub const Game = struct {
         // remove the action
         _ = self.turns_taken.pop();
 
-        return .{ self.curr_player_id, self.get_scoped_state() };
+        return .{ self.curr_player_id, self.get_scoped_state(self.curr_player_id) };
     }
 
     /// Returns an array of size 7 containing all possible actions a player can take.
@@ -315,12 +314,12 @@ pub const Game = struct {
         return result;
     }
 
-    /// Returns the state of the game as `current_actor` sees it.
-    pub fn get_scoped_state(self: *const Game) ScopedState {
+    /// Returns the state of the game as player with `p_id` sees it.
+    pub fn get_scoped_state(self: *const Game, p_id: PlayerId) ScopedState {
         const scoped_state = ScopedState{
             .dealer_actor = self.dealer_id,
             .current_actor = self.curr_player_id,
-            .hand = self.players[self.curr_player_id].hand,
+            .hand = self.players[p_id].hand,
 
             .calling_actor = self.caller_id,
             .called_alone = self.called_alone,

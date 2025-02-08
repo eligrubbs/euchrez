@@ -1,5 +1,6 @@
 const std = @import("std");
 
+/// Creates a null sentinel array type holding up to `len` items of type `T`.
 pub fn NullSentinelArray(comptime T: type, len: usize) type {
     return struct {
         const Self = @This();
@@ -12,12 +13,14 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
             ItemNotPresent,
         };
 
+        /// Makes a new array filled with `null`
         pub fn new() Self {
             return Self{
                 .data = .{null} ** len,
             };
         }
 
+        /// Returns the number of items in the array.
         pub fn num_left(self: *const Self) usize {
             inline for (self.data, 0..) |elem, count| {
                 if (elem == null) return count;
@@ -34,8 +37,9 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
             self.data[num] = item;
         }
 
-        /// Sets last element in array to `null`
-        /// Returns the last element in the array (which can be null or `T`).
+        /// Sets last element in array to `null`  
+        /// Returns the last element in the array (which can be null or `T`).  
+        /// If it returns null then the array is empty.
         pub fn pop(self: *Self) ?T {
             const n_left = self.num_left();
             if (n_left == 0) return null;
@@ -44,7 +48,8 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
             return old;
         }
 
-        /// Return a copy of the element at `ind`. null if out of bounds or `ind` is null
+        /// Return a copy of the element at `ind`.  
+        /// Returns `null` if out of bounds or `ind` is `null`
         pub fn get(self: *const Self, ind: usize) ?T {
             if (ind >= len) return null;
             return self.data[ind];
