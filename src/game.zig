@@ -53,7 +53,7 @@ pub const Game = struct {
     called_alone: ?bool,
     flipped_choice: ?FlippedChoice,
 
-    const GameError = error{
+    pub const GameError = error{
         ActionNotLegalGivenGameState,
         GameHasNotStarted,
         GameIsOver,
@@ -243,8 +243,11 @@ pub const Game = struct {
         return .{ self.curr_player_id, self.get_scoped_state(self.curr_player_id) };
     }
 
-    /// Returns an array of size 7 containing all possible actions a player can take.
+    /// Returns an array of size 7 containing all possible actions the current player can take.
     /// The array is 7 long because at most a player can have 7 choices at once, never more.
+    /// 
+    /// Note: caller is responsible for handling contextual "data leakage" in their application.  
+    /// E.g. Player 2 sees the output of this function when player 1 is the current player. (Player 2 potentially just saw some/all of Player 1's cards)
     pub fn get_legal_actions(self: *const Game) LegalActions {
         var result: LegalActions = LegalActions.new();
         if (self.is_over()) return result;
