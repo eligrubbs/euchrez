@@ -4,7 +4,7 @@ Implementation of Euchre in Zig.
 Meant to be used as a library in your program to play euchre games.
 
 The `Game` type is intended only to move the game forward/backward. 
-An interface for loading each of the 4 players as unique agents has not been created yet.
+An interface for loading each of the 4 players as unique agents has not been created yet. 
 
 
 ### Benchmarks:
