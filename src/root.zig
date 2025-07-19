@@ -18,3 +18,12 @@ pub const TurnsTaken: type = game.TurnsTaken;
 pub const LegalActions: type = game.LegalActions;
 pub const CenterCards: type = game.CenterCards;
 pub const Hand: type = @import("player.zig").Player.Hand;
+
+pub const Agent: type = @import("Agent.zig");
+pub const random_agent: type = @import("agents/random_agent.zig");
+
+
+test "link all other tests" {
+    const std = @import("std");
+    std.testing.refAllDecls(@This());
+}
