@@ -58,8 +58,15 @@ pub const Env = struct {
     }
 
     /// Run the game from the current state until the end
-    pub fn run() void {
+    pub fn run(self: *Env) void {
+        while (!self.game.is_over()) {
+            const curr_p = self.game.curr_player_id;
+            const curr_state = self.game.get_scoped_state(curr_p);
+            const legal_acts = self.game.get_legal_actions();
+            const act_to_take = self.agents[curr_p].decideAction(&curr_state, legal_acts);
 
+            _ = try self.game.step(act_to_take);
+        }
     }
 
 };

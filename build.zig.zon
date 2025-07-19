@@ -1,5 +1,5 @@
 .{
-    .name = "euchrez",
+    .name = .euchrez,
 
     .version = "0.1.1",
 
@@ -7,6 +7,8 @@
     // This is currently advisory only; Zig does not yet do anything
     // with this value.
     // .minimum_zig_version = "0.11.0",
+
+    .fingerprint = 0xc02249c19b10b4fb,
 
     .dependencies = .{},
 

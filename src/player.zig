@@ -1,13 +1,13 @@
 
 const Card = @import("card/card.zig").Card;
-const NullSentinelArray = @import("nullarray.zig").NullSentinelArray;
+const OptionalArray = @import("optionalarray.zig").OptionalArray;
 
 pub const PlayerId: type = u2;
 
 
 /// Internal player type used by `Game` type.
 pub const Player = struct {
-    pub const Hand = NullSentinelArray(Card, 6);
+    pub const Hand = OptionalArray(Card, 6);
 
     id: PlayerId,
     tricks: u3,
@@ -40,11 +40,11 @@ pub const Player = struct {
 
     /// Returns the number of cards in the players hand.
     pub fn cards_left(self: *const Player) usize {
-        return self.hand.num_left();
+        return self.hand.num_items();
     }
 
     pub fn pick_up_6th_card(self: *Player, card: Card) PlayerError!void {
-        if (self.hand.num_left() != 5) return PlayerError.HandNot5Cards;
+        if (self.hand.num_items() != 5) return PlayerError.HandNot5Cards;
         self.hand.push(card) catch return PlayerError.HandFull;
     }
 

@@ -11,12 +11,12 @@ const Action = @import("action.zig").Action;
 const Player = @import("player.zig").Player;
 pub const PlayerId: type = @import("player.zig").PlayerId;
 pub const FlippedChoice = @import("action.zig").FlippedChoice;
-const NullSentinelArray = @import("nullarray.zig").NullSentinelArray;
+const OptionalArray = @import("optionalarray.zig").OptionalArray;
 
 pub const Turn: type = struct { PlayerId, Action };
-pub const TurnsTaken: type = NullSentinelArray(Turn, 29);
-pub const LegalActions: type = NullSentinelArray(Action, 7);
-pub const CenterCards: type = NullSentinelArray(Card, 4);
+pub const TurnsTaken: type = OptionalArray(Turn, 29);
+pub const LegalActions: type = OptionalArray(Action, 7);
+pub const CenterCards: type = OptionalArray(Card, 4);
 
 pub const GameConfig = struct {
     /// Determines whether to print out to stdout the events of the game
@@ -30,7 +30,7 @@ pub const GameConfig = struct {
 pub const Game = struct {
     const num_players = 4; // do not change
     const empty_center: CenterCards = CenterCards.new();
-    const Winners: type = NullSentinelArray(PlayerId, 5);
+    const Winners: type = OptionalArray(PlayerId, 5);
 
     prng: std.Random.DefaultPrng,
     turns_taken: TurnsTaken, // maximum number of actions there can be in a euchre game.
@@ -163,7 +163,7 @@ pub const Game = struct {
 
     /// Returns the most recent action taken or null if no actions have been taken
     fn last_action(self: *const Game) ?Turn {
-        const acts_taken = self.turns_taken.num_left();
+        const acts_taken = self.turns_taken.num_items();
         if (acts_taken == 0) return null;
         return self.turns_taken.get(acts_taken - 1);
     }
@@ -202,7 +202,7 @@ pub const Game = struct {
 
         const legal_acts = self.get_legal_actions();
         const old_player = self.curr_player_id;
-        const legal = (legal_acts.find(action) catch 10) < legal_acts.num_left();
+        const legal = (legal_acts.find(action) catch 10) < legal_acts.num_items();
 
         if (!legal) return GameError.ActionNotLegalGivenGameState;
 
@@ -303,7 +303,7 @@ pub const Game = struct {
                 }
             }
 
-            if (result.num_left() > 0) return result; // must follow suit
+            if (result.num_items() > 0) return result; // must follow suit
             // exit control flow, can play any card
         }
 
@@ -432,11 +432,11 @@ pub const Game = struct {
         self.players[self.curr_player_id].discard_card(card) catch unreachable;
 
         std.debug.assert(self.called_alone != null);
-        std.debug.assert(self.center.num_left() < 4); // there is room
-        std.debug.assert(!self.called_alone.? or (self.center.num_left() < 3)); // there is room if someone called alone
+        std.debug.assert(self.center.num_items() < 4); // there is room
+        std.debug.assert(!self.called_alone.? or (self.center.num_items() < 3)); // there is room if someone called alone
         self.center.push(card) catch unreachable;
 
-        if (self.center.num_left() == 4 or (self.center.num_left() == 3 and self.called_alone.?)) { // end trick
+        if (self.center.num_items() == 4 or (self.center.num_items() == 3 and self.called_alone.?)) { // end trick
             const winner_id = self.judge_trick();
             self.previous_winners.push(winner_id) catch unreachable;
             self.players[winner_id].award_trick();
@@ -462,10 +462,10 @@ pub const Game = struct {
         const card = action.ToCard() catch unreachable;
 
         std.debug.assert(self.called_alone != null);
-        if (self.center.num_left() == 0) { // this action ended a trick
+        if (self.center.num_items() == 0) { // this action ended a trick
             // if no one calls, it takes at least 6 turns to get to a trick end (pick, discard, 4 plays)
             // else it takes at least 5 (pick, discard, 3 plays)
-            const num_turns = self.turns_taken.num_left();
+            const num_turns = self.turns_taken.num_items();
             std.debug.assert((num_turns > 5 and !self.called_alone.?) or (num_turns > 4 and self.called_alone.?));
 
             if (self.is_over()) {
@@ -485,13 +485,13 @@ pub const Game = struct {
                 self.order[offset] = last_turn[0];
                 self.center.push(act_card) catch unreachable;
             }
-            std.debug.assert(self.center.num_left() == 4 or (self.center.num_left() == 3 and self.called_alone != null and self.called_alone.?));
+            std.debug.assert(self.center.num_items() == 4 or (self.center.num_items() == 3 and self.called_alone != null and self.called_alone.?));
 
             // current player right now was the winner
             const old_winner = self.previous_winners.pop().?;
             self.players[old_winner].take_away_trick() catch unreachable;
         } else {
-            std.debug.assert(self.center.num_left() < 4 and self.center.num_left() > 0);
+            std.debug.assert(self.center.num_items() < 4 and self.center.num_items() > 0);
             self.curr_player_id = self.player_before(self.curr_player_id);
         }
 
@@ -514,7 +514,7 @@ pub const Game = struct {
     /// Order is not used before the discard stage, so we don't undo that
     fn undo_discard_action(self: *Game, action: Action) void {
         self.curr_player_id = self.dealer_id;
-        std.debug.assert(self.players[self.dealer_id].hand.num_left() == 5);
+        std.debug.assert(self.players[self.dealer_id].hand.num_items() == 5);
         const deck_card = action.ToCard() catch unreachable;
         self.players[self.dealer_id].pick_up_6th_card(deck_card) catch unreachable;
     }
@@ -525,7 +525,7 @@ pub const Game = struct {
     /// Leverages that indices of cards in center match the id of who played them in `self.order`
     fn judge_trick(self: *Game) PlayerId {
         std.debug.assert(self.called_alone != null);
-        std.debug.assert(self.center.num_left() == 4 or (self.center.num_left() == 3 and self.called_alone.?));
+        std.debug.assert(self.center.num_items() == 4 or (self.center.num_items() == 3 and self.called_alone.?));
 
         var best_player: PlayerId = self.order[0];
         var best_card: Card = self.center.get(0).?;
@@ -619,7 +619,7 @@ test "play 10,000 games randomly" {
             if (game.is_over() == true) break;
 
             const acts = game.get_legal_actions();
-            const act = acts.get(prng.random().intRangeAtMost(usize, 1, acts.num_left()) - 1);
+            const act = acts.get(prng.random().intRangeAtMost(usize, 1, acts.num_items()) - 1);
 
             _ = try game.step(act.?);
         }

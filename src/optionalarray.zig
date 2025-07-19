@@ -1,10 +1,10 @@
 const std = @import("std");
 
-/// Creates a null sentinel array type holding up to `len` items of type `T`.
-pub fn NullSentinelArray(comptime T: type, len: usize) type {
+/// Creates an array type holding up to `len` items of type `T` where each can be empty.
+pub fn OptionalArray(comptime T: type, len: usize) type {
     return struct {
         const Self = @This();
-        data: [len:null]?T,
+        data: [len]?T,
         max: usize = len,
 
         pub const ArrayError = error{
@@ -21,8 +21,8 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
         }
 
         /// Returns the number of items in the array.
-        pub fn num_left(self: *const Self) usize {
-            inline for (self.data, 0..) |elem, count| {
+        pub fn num_items(self: *const Self) usize {
+            for (self.data, 0..len) |elem, count| {
                 if (elem == null) return count;
             }
             return len;
@@ -32,7 +32,7 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
         /// You can push `null` safely if array is full.
         pub fn push(self: *Self, item: ?T) ArrayError!void {
             if (item == null) return;
-            const num = self.num_left();
+            const num = self.num_items();
             if (num >= len) return ArrayError.ArrayFull;
             self.data[num] = item;
         }
@@ -41,7 +41,7 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
         /// Returns the last element in the array (which can be null or `T`).  
         /// If it returns null then the array is empty.
         pub fn pop(self: *Self) ?T {
-            const n_left = self.num_left();
+            const n_left = self.num_items();
             if (n_left == 0) return null;
             const old: ?T = self.data[n_left - 1];
             self.data[n_left - 1] = null;
@@ -90,6 +90,6 @@ pub fn NullSentinelArray(comptime T: type, len: usize) type {
 test "u8 array" {
     const expect = @import("std").testing.expect;
 
-    var bob = NullSentinelArray(u8, 5).new();
-    try expect(bob.num_left() == 0);
+    var bob = OptionalArray(u8, 5).new();
+    try expect(bob.num_items() == 0);
 }
