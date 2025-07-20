@@ -3,6 +3,7 @@
 //! It will take actions randomly.
 
 const std = @import("std");
+const Xoshiro256 = std.Random.Xoshiro256;
 
 const Action = @import("../action.zig").Action;
 const ScopedState = @import("../game.zig").ScopedState;
@@ -26,7 +27,7 @@ pub fn RandomAgent(comptime config: Config) type {
         /// Creates a new random agent.
         pub fn init() !Self {
 
-            const the_prng = std.Random.DefaultPrng.init(blk: {
+            const the_prng: Xoshiro256 = Xoshiro256.init(blk: {
                 var the_seed: u64 = undefined;
                 if (config.seed == null) {
                     try std.posix.getrandom(std.mem.asBytes(&the_seed));
@@ -39,6 +40,13 @@ pub fn RandomAgent(comptime config: Config) type {
             return Self{
                 .prng = the_prng,
             };
+        }
+
+        // Reset the generator with a specific seed.
+        // This can be used for whatever reason you want, but might
+        // be particularly helpful if calling `init` is throwing an error.
+        pub fn reset_rdm_generator(self: *Self, seed: u64) void {
+            self.prng = self.prng.init(seed);
         }
 
         pub fn decide(context: *anyopaque, state: *const ScopedState, acts: LegalActions) Action {
@@ -68,7 +76,7 @@ test "random-agent-works" {
 
     var game = try Game.new(.{.seed = test_seed});
 
-    var rdm_agent = (try RandomAgent(.{.seed = test_seed}).init());
+    var rdm_agent = try RandomAgent(.{.seed = test_seed}).init();
     var agent = rdm_agent.agent();
 
     const first_act = agent.decide(&game.get_scoped_state(game.curr_player_id), game.get_legal_actions());

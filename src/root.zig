@@ -22,6 +22,10 @@ pub const Hand: type = @import("player.zig").Player.Hand;
 pub const Agent: type = @import("Agent.zig");
 pub const random_agent: type = @import("agents/random_agent.zig");
 
+const env = @import("env.zig");
+pub const Env = env.Env;
+pub const EnvConfig = env.EnvConfig;
+
 
 test "link all other tests" {
     const std = @import("std");
