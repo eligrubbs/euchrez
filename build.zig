@@ -32,7 +32,7 @@ pub fn build(b: *std.Build) void {
     const docs_step = b.step("docs", "Install docs into zig-out/docs");
     docs_step.dependOn(&install_docs.step);
 
-    // Internal executable
+    // Executable
     const exe = b.addExecutable(.{
         .name = "euchrezExe",
         .root_source_file = b.path("src/main.zig"),
@@ -52,6 +52,27 @@ pub fn build(b: *std.Build) void {
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
+
+    // Benchmark Script
+    const bench = b.addExecutable(.{
+        .name = "euchrezBenchmark",
+        .root_source_file = b.path("src/benchmark.zig"),
+        .target = target,
+        .optimize = std.builtin.OptimizeMode.ReleaseFast,
+    });
+    bench.root_module.addImport("euchrezInternal", lib_mod);
+
+    b.installArtifact(bench);
+
+    const run_bench_cmd = b.addRunArtifact(bench);
+    run_bench_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        run_bench_cmd.addArgs(args);
+    }
+
+    const run_bench_step = b.step("benchmark", "Benchmark the app");
+    run_bench_step.dependOn(&run_bench_cmd.step);
 
 
     // Test Step

@@ -1,3 +1,4 @@
+const std = @import("std");
 
 const game =  @import("game.zig");
 const Game = game.Game;
@@ -12,11 +13,16 @@ pub const EnvConfig = struct {
     /// List of agents to play the game.
     /// The order in this array will become their ID (0, 1, 2, or 3)
     agents: [4]Agent,
+
+    /// Whether the Environment (not the internal game) should be telling you what is happening
+    verbose: bool = false,
 };
 
 /// A wrapper for the euchre `Game` that makes it easier for individual agents
 /// to play euchre against one another.
 pub const Env = struct {
+
+    config: EnvConfig,
 
     game: Game,
 
@@ -26,6 +32,7 @@ pub const Env = struct {
     /// Create a new euchre environment ready to be played
     pub fn new(config: EnvConfig) !Env {
         return Env {
+            .config = config,
             .game = try Game.new(config.game_config),
             .agents = config.agents,
         };
