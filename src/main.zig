@@ -24,7 +24,7 @@ pub fn main() !void {
     // Start Time
     const start = try std.time.Instant.now();
 
-    var agent_1 = try lib.random_agent.RandomAgent(.{.seed = 44}).init();
+    var agent_1 = lib.input_agent.InputAgent(.{}).init();
     var agent_2 = try lib.random_agent.RandomAgent(.{.seed = 44}).init();
     var agent_3 = try lib.random_agent.RandomAgent(.{.seed = 44}).init();
     var agent_4 = try lib.random_agent.RandomAgent(.{.seed = 44}).init();

@@ -21,6 +21,7 @@ pub const Hand: type = @import("player.zig").Player.Hand;
 
 pub const Agent: type = @import("Agent.zig");
 pub const random_agent: type = @import("agents/random_agent.zig");
+pub const input_agent: type = @import("agents/input_agent.zig");
 
 const env = @import("env.zig");
 pub const Env = env.Env;
